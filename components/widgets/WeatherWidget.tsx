@@ -15,7 +15,8 @@ function Weather({ w, h, options }: WidgetProps) {
   const now = useNow(60_000);
   const deg = (c: number) => (options.unit === "F" ? Math.round((c * 9) / 5 + 32) : c) + "°";
   const tall = h >= 2;
-  const big = tall ? 56 : 40;
+  const narrow = w === 1;
+  const big = narrow ? 32 : tall ? 56 : 40;
   const range = `Min ${deg(WEATHER.min)} · Max ${deg(WEATHER.max)}`;
   const forecastRow = w >= 4 && h >= 2;
   const forecastCol = !forecastRow && h >= 3;
@@ -27,22 +28,22 @@ function Weather({ w, h, options }: WidgetProps) {
 
   return (
     <div className="weather">
-      <div className="weather-now">
+      <div className="weather-now" style={narrow ? { gap: 8 } : undefined}>
         <span style={{ display: "inline-flex", flex: "none" }}>
           <Icon name={WEATHER.kind} size={big} strokeWidth={1.5} color={KIND_COLOR[WEATHER.kind]} />
         </span>
         <div>
           <div className="weather-temp" style={{ fontSize: big }}>{deg(WEATHER.temp)}</div>
-          {tall && <div className="muted">{WEATHER.condition}</div>}
+          {tall && !narrow && <div className="muted">{WEATHER.condition}</div>}
         </div>
-        {!tall && (
+        {!tall && !narrow && (
           <div className="weather-side muted">
             <span>{WEATHER.condition}</span>
             <span>{range}</span>
           </div>
         )}
       </div>
-      {tall && <div className="muted">{range}</div>}
+      {tall && <div className="muted">{narrow ? WEATHER.condition : range}</div>}
       {forecastRow && (
         <div className="forecast-row">
           {days.map((f) => (
@@ -77,7 +78,7 @@ registerWidget({
   description: "Conditions actuelles et prévisions pour votre ville.",
   source: "default",
   access: "service météo (réseau)",
-  sizes: { min: [2, 1], default: [2, 1], max: [4, 3] },
+  sizes: { min: [1, 1], default: [2, 1], max: [4, 3] },
   options: [
     {
       key: "unit",

@@ -1,8 +1,14 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import Icon from "@/components/Icon";
 
+/**
+ * Modale centrée. Rendue dans <body> : les widgets vivent dans des éléments
+ * transformés (grille, anti-rémanence), où `position: fixed` ne couvrirait
+ * pas l'écran.
+ */
 export default function Modal({
   title,
   subtitle,
@@ -22,7 +28,7 @@ export default function Modal({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  return (
+  return createPortal(
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
@@ -36,7 +42,33 @@ export default function Modal({
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
+  );
+}
+
+/** Demande de confirmation avant une action irréversible. */
+export function ConfirmDialog({
+  title,
+  message,
+  confirmLabel,
+  onConfirm,
+  onCancel,
+}: {
+  title: string;
+  message?: string;
+  confirmLabel: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <Modal title={title} onClose={onCancel}>
+      {message && <div className="muted">{message}</div>}
+      <div className="modal-actions">
+        <button className="btn" onClick={onCancel}>Annuler</button>
+        <button className="btn btn-primary" autoFocus onClick={onConfirm}>{confirmLabel}</button>
+      </div>
+    </Modal>
   );
 }
 

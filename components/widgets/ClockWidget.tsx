@@ -8,16 +8,21 @@ const pad = (n: number) => String(n).padStart(2, "0");
 
 function Clock({ w, h, options }: WidgetProps) {
   const now = useNow(1000);
-  const timeSize = h === 1 ? 56 : w >= 4 ? 132 : w === 3 ? 104 : 78;
-  const dateSize = w >= 4 ? 26 : w === 3 ? 20 : 17;
+  const narrow = w === 1;
+  const timeSize = narrow ? 44 : h === 1 ? 56 : w >= 4 ? 132 : w === 3 ? 104 : 78;
+  const dateSize = narrow ? 14 : w >= 4 ? 26 : w === 3 ? 20 : 17;
+  // Sur une seule colonne : pas de secondes, date abrégée.
+  const date = narrow
+    ? now.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })
+    : `${DAYS[now.getDay()]} ${now.getDate()} ${MONTHS[now.getMonth()]}`;
   return (
     <div className="clock">
       <div className="clock-time" style={{ fontSize: timeSize }}>
         {pad(now.getHours())}:{pad(now.getMinutes())}
-        {options.secs === "on" && <span className="clock-secs">:{pad(now.getSeconds())}</span>}
+        {options.secs === "on" && !narrow && <span className="clock-secs">:{pad(now.getSeconds())}</span>}
       </div>
       <div className="clock-date" style={{ fontSize: dateSize }}>
-        {DAYS[now.getDay()]} {now.getDate()} {MONTHS[now.getMonth()]}
+        {date}
       </div>
     </div>
   );
@@ -29,7 +34,7 @@ registerWidget({
   description: "Heure et date, lisibles de loin.",
   source: "default",
   access: "aucun",
-  sizes: { min: [2, 1], default: [2, 1], max: [4, 2] },
+  sizes: { min: [1, 1], default: [2, 1], max: [4, 2] },
   options: [
     {
       key: "secs",

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import GridLayout, { noCompactor, useContainerWidth, type Layout, type LayoutItem } from "react-grid-layout";
+import GridLayout, { noCompactor, useContainerWidth, type Compactor, type EventCallback, type Layout, type LayoutItem } from "react-grid-layout";
 import { getWidget, listWidgets, type WidgetOptions } from "@/lib/widgets";
 import { DAYS, MONTHS } from "@/lib/demo-data";
 import Icon, { type IconName } from "@/components/Icon";
@@ -14,6 +14,10 @@ const COLS = 8;
 const ROWS = 5; // lignes visibles sans défilement sur l'écran mural
 const GAP = 16;
 const HEADER = 72;
+// Placement libre : pas de tassement automatique, et un widget qu'on déplace ou
+// redimensionne ne bouscule jamais les autres (il s'arrête au bord du voisin).
+const FREE_PLACEMENT: Compactor = { ...noCompactor, preventCollision: true };
+
 const PHONE_QUERY = "(max-width: 760px)";
 
 type PlacedWidget = {
@@ -133,6 +137,8 @@ export default function Board() {
   const [configId, setConfigId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [screenOpen, setScreenOpen] = useState(false);
+  // Widget en cours de déplacement ou de redimensionnement, avec sa taille en direct.
+  const [active, setActive] = useState<{ id: string; w: number; h: number } | null>(null);
 
   const { width, containerRef, mounted } = useContainerWidth();
   const rowHeight = useRowHeight();
@@ -188,6 +194,11 @@ export default function Board() {
     [editing]
   );
 
+  const trackActive: EventCallback = useCallback((_layout, _old, item) => {
+    if (item) setActive({ id: item.i, w: item.w, h: item.h });
+  }, []);
+  const clearActive = useCallback(() => setActive(null), []);
+
   const patchWidget = (id: string, patch: Partial<PlacedWidget>) =>
     setDraft((prev) => ({
       ...prev,
@@ -236,6 +247,9 @@ export default function Board() {
       }),
     [state.layout, state.widgets]
   );
+
+  // Nombre de lignes du quadrillage affiché pendant un déplacement.
+  const guideRows = Math.max(ROWS, ...state.layout.map((l) => l.y + l.h)) + 1;
 
   const configWidget = editing ? draft.widgets.find((w) => w.id === configId) : undefined;
   const configDef = configWidget ? getWidget(configWidget.type) : undefined;
@@ -286,45 +300,70 @@ export default function Board() {
           </div>
         )}
 
+        {ready && !isPhone && editing && active && (
+          <div
+            className="grid-guide"
+            aria-hidden="true"
+            style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))`, gridAutoRows: rowHeight, gap: GAP }}
+          >
+            {Array.from({ length: COLS * guideRows }, (_, k) => (
+              <div key={k} className="grid-guide-cell" />
+            ))}
+          </div>
+        )}
+
         {ready && !isPhone && (
           <GridLayout
             width={width}
             layout={gridLayout}
             gridConfig={{ cols: COLS, rowHeight, margin: [GAP, GAP], containerPadding: [0, 0] }}
             dragConfig={{ enabled: editing, handle: ".drag-handle" }}
-            resizeConfig={{ enabled: editing, handles: ["se"] }}
-            compactor={noCompactor}
+            resizeConfig={{
+              enabled: editing,
+              handles: ["se"],
+              handleComponent: (_axis, ref) => (
+                <span ref={ref} className="btn-icon edit-btn resize-handle" title="Redimensionner">
+                  <Icon name="resize" size={18} />
+                </span>
+              ),
+            }}
+            compactor={FREE_PLACEMENT}
             onLayoutChange={onLayoutChange}
+            onDragStart={trackActive}
+            onDragStop={clearActive}
+            onResizeStart={trackActive}
+            onResize={trackActive}
+            onResizeStop={clearActive}
           >
             {state.widgets.map((widget) => {
               const cell = state.layout.find((l) => l.i === widget.id);
               const def = getWidget(widget.type);
               if (!cell || !def) return null;
+              const size = active?.id === widget.id ? active : cell;
               return (
                 <div key={widget.id} className={"cell" + (editing ? " editing" : "")}>
                   <WidgetFrame
                     widget={widget}
-                    w={cell.w}
-                    h={cell.h}
-                    height={cell.h * rowHeight + (cell.h - 1) * GAP}
+                    w={size.w}
+                    h={size.h}
+                    height={size.h * rowHeight + (size.h - 1) * GAP}
                   />
                   {editing && (
                     <>
                       {/* Voile : bloque le contenu et sert de poignée de déplacement. */}
                       <div className="cell-veil drag-handle" />
                       <div className="cell-controls">
-                        <span className="btn-icon drag-handle" role="img" aria-label="Déplacer (glisser)" title="Déplacer">
+                        <span className="btn-icon edit-btn drag-handle" role="img" aria-label="Déplacer (glisser)" title="Déplacer">
                           <Icon name="move" size={18} />
                         </span>
-                        <button className="btn-icon" aria-label={`Configurer ${def.name}`} title="Configurer" onClick={() => { closePanels(); setConfigId(widget.id); }}>
+                        <button className="btn-icon edit-btn" aria-label={`Configurer ${def.name}`} title="Configurer" onClick={() => { closePanels(); setConfigId(widget.id); }}>
                           <Icon name="gear" size={18} />
                         </button>
-                        <button className="btn-icon" aria-label={`Supprimer ${def.name}`} title="Supprimer" onClick={() => removeWidget(widget.id)}>
+                        <button className="btn-icon edit-btn" aria-label={`Supprimer ${def.name}`} title="Supprimer" onClick={() => removeWidget(widget.id)}>
                           <Icon name="trash" size={18} />
                         </button>
                       </div>
-                      <div className="cell-size">{cell.w} × {cell.h}</div>
-                      <div className="cell-resize-hint"><Icon name="resize" size={16} /></div>
+                      <div className="cell-size">{size.w} × {size.h}</div>
                     </>
                   )}
                 </div>
