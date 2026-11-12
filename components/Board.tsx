@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import GridLayout, { noCompactor, useContainerWidth, type Compactor, type EventCallback, type Layout, type LayoutItem } from "react-grid-layout";
+import GridLayout, { useContainerWidth, type EventCallback, type Layout, type LayoutItem } from "react-grid-layout";
+import { createPushCompactor, type Cell, type MoveSession } from "@/lib/placement";
 import { getWidget, listWidgets, type WidgetOptions } from "@/lib/widgets";
 import { DAYS, MONTHS } from "@/lib/demo-data";
 import Icon, { type IconName } from "@/components/Icon";
@@ -14,10 +15,6 @@ const COLS = 8;
 const ROWS = 5; // lignes visibles sans défilement sur l'écran mural
 const GAP = 16;
 const HEADER = 72;
-// Placement libre : pas de tassement automatique, et un widget qu'on déplace ou
-// redimensionne ne bouscule jamais les autres (il s'arrête au bord du voisin).
-const FREE_PLACEMENT: Compactor = { ...noCompactor, preventCollision: true };
-
 const PHONE_QUERY = "(max-width: 760px)";
 
 type PlacedWidget = {
@@ -26,8 +23,6 @@ type PlacedWidget = {
   showTitle: boolean;
   options: WidgetOptions;
 };
-
-type Cell = { i: string; x: number; y: number; w: number; h: number };
 
 type BoardState = {
   widgets: PlacedWidget[];
@@ -194,10 +189,25 @@ export default function Board() {
     [editing]
   );
 
+  // Geste en cours : sert au calcul des collisions (voir lib/placement.ts).
+  const moveSession = useRef<MoveSession | null>(null);
+  const compactor = useMemo(() => createPushCompactor(moveSession), []);
+
+  const startMove: EventCallback = useCallback((layout, _old, item) => {
+    if (!item) return;
+    moveSession.current = {
+      id: item.i,
+      origin: layout.map(({ i, x, y, w, h }) => ({ i, x, y, w, h })),
+    };
+    setActive({ id: item.i, w: item.w, h: item.h });
+  }, []);
   const trackActive: EventCallback = useCallback((_layout, _old, item) => {
     if (item) setActive({ id: item.i, w: item.w, h: item.h });
   }, []);
-  const clearActive = useCallback(() => setActive(null), []);
+  const endMove = useCallback(() => {
+    moveSession.current = null;
+    setActive(null);
+  }, []);
 
   const patchWidget = (id: string, patch: Partial<PlacedWidget>) =>
     setDraft((prev) => ({
@@ -327,13 +337,13 @@ export default function Board() {
                 </span>
               ),
             }}
-            compactor={FREE_PLACEMENT}
+            compactor={compactor}
             onLayoutChange={onLayoutChange}
-            onDragStart={trackActive}
-            onDragStop={clearActive}
-            onResizeStart={trackActive}
+            onDragStart={startMove}
+            onDragStop={endMove}
+            onResizeStart={startMove}
             onResize={trackActive}
-            onResizeStop={clearActive}
+            onResizeStop={endMove}
           >
             {state.widgets.map((widget) => {
               const cell = state.layout.find((l) => l.i === widget.id);
