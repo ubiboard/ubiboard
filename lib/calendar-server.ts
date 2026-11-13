@@ -15,6 +15,13 @@ const MAX_REDIRECTS = 3;
 const MAX_OCCURRENCES = 5000; // garde-fou par événement récurrent
 const DAY_MS = 86_400_000;
 
+/**
+ * Erreur dont le message peut être montré à l'utilisateur. Les autres erreurs
+ * (celles de l'analyseur, par exemple) peuvent citer le contenu de l'agenda :
+ * elles sont remplacées par un message générique.
+ */
+export class CalendarError extends Error {}
+
 /* ---------- Adresse ---------- */
 
 /**
@@ -27,13 +34,18 @@ export function normalizeCalendarUrl(input: string): string {
   try {
     url = new URL(input.trim().replace(/^webcal:\/\//i, "https://"));
   } catch {
-    throw new Error("Le lien n'est pas une adresse valide.");
+    throw new CalendarError("Le lien n'est pas une adresse valide.");
+  }
+  // En développement uniquement : un agenda de test servi par la machine locale.
+  if (process.env.NODE_ENV !== "production" && process.env.CALENDAR_ALLOW_LOCAL === "1" && url.hostname === "localhost") {
+    url.protocol = "http:"; // le serveur de test local ne parle pas https
+    return url.toString();
   }
   const host = url.hostname.toLowerCase();
   const isIp = /^[\d.]+$/.test(host) || host.includes(":");
   const isLocal = host === "localhost" || !host.includes(".") || /\.(local|internal|lan|home|localhost)$/.test(host);
   if (url.protocol !== "https:" || isIp || isLocal || url.username || url.password) {
-    throw new Error("Le lien doit être une adresse https publique.");
+    throw new CalendarError("Le lien doit être une adresse https publique.");
   }
   return url.toString();
 }
@@ -63,11 +75,11 @@ async function fetchIcs(url: string): Promise<string> {
     }
     break;
   }
-  if (!response || !response.ok) throw new Error("L'agenda ne répond pas (lien expiré ou incorrect ?).");
+  if (!response || !response.ok) throw new CalendarError("L'agenda ne répond pas (lien expiré ou incorrect ?).");
 
   const text = await response.text();
-  if (text.length > MAX_BYTES) throw new Error("Agenda trop volumineux.");
-  if (!text.includes("BEGIN:VCALENDAR")) throw new Error("Ce lien ne renvoie pas un agenda au format iCal.");
+  if (text.length > MAX_BYTES) throw new CalendarError("Agenda trop volumineux.");
+  if (!text.includes("BEGIN:VCALENDAR")) throw new CalendarError("Ce lien ne renvoie pas un agenda au format iCal.");
 
   cache.set(cacheKey, { at: Date.now(), text });
   return text;
@@ -84,12 +96,31 @@ function toEvent(sourceId: string, uid: string, title: string, start: IcalTime, 
   const allDay = start.isDate;
   const startValue = allDay ? dateOnly(start) : start.toJSDate().toISOString();
   const endValue = end ? (allDay ? dateOnly(end) : end.toJSDate().toISOString()) : startValue;
-  return { id: `${sourceId}:${uid}:${startValue}`, sourceId, title: title || "(sans titre)", allDay, start: startValue, end: endValue };
+  return { id: `${sourceId}:${uid}:${startValue}`, sourceId, title: (title ?? "").trim() || "(sans titre)", allDay, start: startValue, end: endValue };
+}
+
+/**
+ * Répare les fichiers iCal mal formés avant de les analyser. Certains
+ * fournisseurs (Ecole Directe, par exemple) écrivent des retours à la ligne
+ * bruts dans un texte : la suite du texte se retrouve seule sur une ligne, sans
+ * nom de propriété, et l'analyseur la refuse. On la rattache à la ligne
+ * précédente, comme un retour à la ligne à l'intérieur du texte.
+ */
+export function repairIcs(ics: string): string {
+  const out: string[] = [];
+  for (const line of ics.split(/\r?\n/)) {
+    if (line === "") continue;
+    const isContinuation = line.startsWith(" ") || line.startsWith("\t");
+    const isProperty = /^[A-Za-z][A-Za-z0-9-]*[;:]/.test(line);
+    if (isContinuation || isProperty || out.length === 0) out.push(line);
+    else out.push(" \\n" + line); // ligne de continuation commençant par un « \n » littéral
+  }
+  return out.join("\r\n");
 }
 
 /** Les événements de cet agenda qui touchent la période [from, to[. */
 export function expandEvents(sourceId: string, ics: string, from: Date, to: Date): CalendarEvent[] {
-  const root = new ICAL.Component(ICAL.parse(ics));
+  const root = new ICAL.Component(ICAL.parse(repairIcs(ics)));
   for (const tz of root.getAllSubcomponents("vtimezone")) ICAL.TimezoneService.register(tz);
 
   // Une marge d'un jour couvre les journées entières, dont le fuseau est celui du lecteur.

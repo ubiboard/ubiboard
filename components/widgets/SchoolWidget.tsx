@@ -5,7 +5,17 @@ import { registerWidget, type WidgetProps } from "@/lib/widgets";
 import { useWidgetData } from "@/lib/board-context";
 import { useNow } from "@/lib/hooks";
 import { DAYS_SHORT } from "@/lib/demo-data";
-import { DEFAULT_SLOT_COLOR, buildAxis, toMinutes, type Slot } from "@/lib/timetable";
+import { addDays, isOnDay, startOfDay } from "@/lib/calendar";
+import { useCalendarEvents } from "@/lib/use-calendar-events";
+import {
+  DEFAULT_SLOT_COLOR,
+  buildAxis,
+  colorForTitle,
+  isIcalLink,
+  toMinutes,
+  type SchoolItem,
+  type Slot,
+} from "@/lib/timetable";
 import Icon from "@/components/Icon";
 import SchoolManager from "./SchoolManager";
 
@@ -15,10 +25,20 @@ const BACK_TO_TODAY_MS = 2 * 60_000;
 
 type View = "2j" | "week";
 
+/** Un bloc à afficher : un créneau saisi à la main, ou un cours venu du lien iCal. */
+type Block = { key: string; start: string; end: string; name: string; color: string | null };
+
+const hhmm = (date: Date) => `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+
 function School({ bodyHeight, options, dataId, setOption }: WidgetProps) {
-  const { items, loading, error } = useWidgetData<Slot>(dataId);
+  const { items, loading, error } = useWidgetData<SchoolItem>(dataId);
   const now = useNow(60_000);
+  const today = startOfDay(now);
   const nowMin = now.getHours() * 60 + now.getMinutes();
+
+  // La liste mêle les créneaux saisis à la main et, éventuellement, un lien iCal.
+  const manual = items.filter((it) => !isIcalLink(it.content)).map((it) => ({ id: it.id, slot: it.content as Slot }));
+  const link = items.find((it) => isIcalLink(it.content));
 
   // Le type de vue est un réglage du widget, commun à tous les appareils du board.
   const view: View = options.span === "week" ? "week" : "2j";
@@ -34,29 +54,44 @@ function School({ bodyHeight, options, dataId, setOption }: WidgetProps) {
     return () => clearTimeout(timer);
   }, [shift]);
 
-  // Jours affichés, en décalage par rapport à aujourd'hui.
-  let offsets = [shift, shift + 1];
-  if (week) {
-    const fromMonday = (now.getDay() + 6) % 7;
-    const hasWeekend = items.some((it) => it.content.day === 6 || it.content.day === 0);
-    offsets = Array.from({ length: hasWeekend ? 7 : 5 }, (_, k) => k - fromMonday + shift * 7);
-  }
-  const days = offsets.map((offset) => {
-    const date = new Date(now);
-    date.setDate(now.getDate() + offset);
+  // Premier jour affiché, et nombre de jours demandés au serveur (une semaine complète en vue semaine).
+  const first = week ? addDays(today, -((now.getDay() + 6) % 7) + shift * 7) : addDays(today, shift);
+  const span = week ? 7 : 2;
+  const { events, errors, failed, loading: eventsLoading } = useCalendarEvents(dataId, first, addDays(first, span), link?.id ?? "", !!link);
+
+  const allDays = Array.from({ length: span }, (_, i) => {
+    const date = addDays(first, i);
+    const offset = Math.round((date.getTime() - today.getTime()) / 86_400_000);
     const short = `${DAYS_SHORT[date.getDay()]} ${date.getDate()}`;
     const relative = offset === 0 ? "Aujourd’hui" : offset === 1 ? "Demain" : offset === -1 ? "Hier" : null;
-    return {
-      offset,
-      today: offset === 0,
-      label: !week && relative ? `${relative} · ${short}` : short,
-      slots: items.filter((it) => it.content.day === date.getDay()),
-    };
+
+    const blocks: Block[] = manual
+      .filter(({ slot }) => slot.day === date.getDay())
+      .map(({ id, slot }) => ({ key: id, start: slot.start, end: slot.end, name: slot.name, color: slot.color }));
+    for (const event of events) {
+      if (event.allDay || !isOnDay(event, date)) continue;
+      const start = new Date(event.start);
+      const end = new Date(event.end);
+      // Un cours qui déborde sur la veille ou le lendemain est borné à la journée.
+      blocks.push({
+        key: event.id,
+        start: start < date ? "00:00" : hhmm(start),
+        end: end >= addDays(date, 1) ? "23:59" : hhmm(end),
+        name: event.title === "(sans titre)" ? "" : event.title,
+        color: colorForTitle(event.title),
+      });
+    }
+    return { date, offset, today: offset === 0, label: !week && relative ? `${relative} · ${short}` : short, blocks };
   });
 
+  // En vue semaine, le week-end n'apparaît que s'il a quelque chose.
+  const weekendBusy = allDays.slice(5).some((d) => d.blocks.length > 0);
+  const days = week && !weekendBusy ? allDays.slice(0, 5) : allDays;
+
   // Un seul axe pour tous les jours affichés : les cours à la même heure sont alignés.
-  const shown = days.flatMap((d) => d.slots.map((it) => it.content));
-  const axis = buildAxis(shown, bodyHeight - BAR_HEIGHT - HEAD_HEIGHT);
+  const axis = buildAxis(days.flatMap((d) => d.blocks), bodyHeight - BAR_HEIGHT - HEAD_HEIGHT);
+  const empty = manual.length === 0 && !link;
+  const problem = error ?? (failed ? "Emploi du temps indisponible pour le moment." : errors[0]?.message);
 
   return (
     <>
@@ -76,38 +111,37 @@ function School({ bodyHeight, options, dataId, setOption }: WidgetProps) {
         </div>
       </div>
 
-      {loading && <div className="dim small">Chargement…</div>}
-      {error && <div className="widget-error">{error}</div>}
-      {!loading && !error && items.length === 0 && <div className="dim small">Aucun créneau pour l’instant.</div>}
+      {(loading || (eventsLoading && manual.length === 0)) && <div className="dim small">Chargement…</div>}
+      {problem && <div className="widget-error" style={{ margin: "0 0 6px" }}>{problem}</div>}
+      {!loading && empty && <div className="dim small">Aucun créneau pour l’instant.</div>}
 
-      {!loading && !error && items.length > 0 && (
+      {!loading && !empty && (
         <div className="school" style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }}>
           {days.map((day) => (
             <div key={day.offset} className="school-day">
               <div className={"day-head" + (day.today ? " today" : "")}>
                 <span className="day-label ellipsis">{day.label}</span>
               </div>
-              {day.slots.length === 0 ? (
+              {day.blocks.length === 0 ? (
                 <div className="dim small">Rien de prévu</div>
               ) : (
                 <div className="school-track" style={{ height: axis.height }}>
-                  {day.slots.map((it) => {
-                    const slot = it.content;
-                    const start = toMinutes(slot.start);
-                    const end = toMinutes(slot.end);
+                  {day.blocks.map((block) => {
+                    const start = toMinutes(block.start);
+                    const end = toMinutes(block.end);
                     const top = axis.y(start);
                     const height = Math.max(axis.y(end) - top, 18);
                     const current = day.today && nowMin >= start && nowMin < end;
-                    const past = day.today && nowMin >= end;
+                    const past = day.offset < 0 || (day.today && nowMin >= end);
                     return (
                       <div
-                        key={it.id}
+                        key={block.key}
                         className={"slot" + (height < 42 ? " compact" : "") + (current ? " current" : "") + (past ? " past" : "")}
-                        style={{ top, height, background: slot.color ?? DEFAULT_SLOT_COLOR }}
-                        title={`${slot.start} – ${slot.end} · ${slot.name}`}
+                        style={{ top, height, background: block.color ?? DEFAULT_SLOT_COLOR }}
+                        title={`${block.start} – ${block.end} · ${block.name}`}
                       >
-                        <span className="slot-time">{slot.start}–{slot.end}</span>
-                        <span className="slot-name">{slot.name}</span>
+                        <span className="slot-time">{block.start}–{block.end}</span>
+                        <span className="slot-name">{block.name}</span>
                       </div>
                     );
                   })}
@@ -124,7 +158,7 @@ function School({ bodyHeight, options, dataId, setOption }: WidgetProps) {
 registerWidget({
   type: "school",
   name: "Emploi du temps",
-  description: "Les créneaux de la semaine, saisis à la main : par jours ou par semaine, avec navigation.",
+  description: "Les créneaux de la semaine, saisis à la main ou synchronisés par un lien iCal (Ecole Directe…).",
   source: "default",
   access: "emploi du temps du board (lecture ; écriture par les administrateurs)",
   storesData: true,

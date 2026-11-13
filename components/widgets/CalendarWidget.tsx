@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { getCalendarEvents } from "@/app/actions";
+import { useEffect, useState } from "react";
 import { registerWidget, rowsFit, type WidgetProps } from "@/lib/widgets";
-import { useBoard, useWidgetData } from "@/lib/board-context";
+import { useWidgetData } from "@/lib/board-context";
+import { useCalendarEvents } from "@/lib/use-calendar-events";
 import { useNow } from "@/lib/hooks";
 import { DAYS, DAYS_SHORT, MONTHS } from "@/lib/demo-data";
 import {
@@ -16,7 +16,6 @@ import {
   startOfDay,
   timeLabel,
   type CalendarEvent,
-  type CalendarResult,
   type CalendarSource,
   type CalendarView,
 } from "@/lib/calendar";
@@ -24,41 +23,8 @@ import Icon from "@/components/Icon";
 import CalendarManager from "./CalendarManager";
 
 const BAR_HEIGHT = 44;
-const REFRESH_MS = 5 * 60_000;
 const BACK_TO_TODAY_MS = 2 * 60_000;
 const LIST_DAYS = 45; // la vue liste regarde un mois et demi devant elle
-
-/** Les événements des agendas du widget sur une période, relus régulièrement. */
-function useCalendarEvents(dataId: string, from: Date, to: Date, sourcesKey: string) {
-  const { boardId } = useBoard();
-  const [result, setResult] = useState<CalendarResult>({ events: [], errors: [] });
-  const [loading, setLoading] = useState(true);
-  const [failed, setFailed] = useState(false);
-  const fromIso = from.toISOString();
-  const toIso = to.toISOString();
-
-  const load = useCallback(async () => {
-    try {
-      setResult(await getCalendarEvents(boardId, dataId, fromIso, toIso));
-      setFailed(false);
-    } catch {
-      setFailed(true);
-    } finally {
-      setLoading(false);
-    }
-  }, [boardId, dataId, fromIso, toIso]);
-
-  useEffect(() => {
-    load();
-    const timer = setInterval(() => {
-      if (document.visibilityState === "visible") load();
-    }, REFRESH_MS);
-    return () => clearInterval(timer);
-    // sourcesKey : on relit quand la liste des agendas change.
-  }, [load, sourcesKey]);
-
-  return { ...result, loading, failed };
-}
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -105,7 +71,7 @@ function Calendar({ w, bodyHeight, options, dataId, setOption }: WidgetProps) {
   const to = addDays(from, dayCount);
 
   const sourcesKey = sources.map((s) => s.id).join(",");
-  const { events, errors, loading, failed } = useCalendarEvents(dataId, from, to, sourcesKey);
+  const { events, errors, loading, failed } = useCalendarEvents(dataId, from, to, sourcesKey, sources.length > 0);
   const colorOf = (event: CalendarEvent) => sources.find((s) => s.id === event.sourceId)?.content.color ?? "#C9C9D1";
   const days = Array.from({ length: dayCount }, (_, i) => addDays(from, i));
   const available = bodyHeight - BAR_HEIGHT;

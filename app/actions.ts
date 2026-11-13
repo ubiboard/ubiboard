@@ -6,7 +6,7 @@ import { getRole, loadBoardView } from "@/lib/boards";
 import { db, schema } from "@/lib/db";
 import { GRID_COLS, PERSON_COLORS, type BoardRole, type BoardState, type DataItem } from "@/lib/board-types";
 import type { CalendarResult } from "@/lib/calendar";
-import { loadCalendarEvents } from "@/lib/calendar-server";
+import { CalendarError, loadCalendarEvents } from "@/lib/calendar-server";
 import { decryptSecret } from "@/lib/crypto";
 import { policyFor, redact } from "@/lib/data-policy";
 
@@ -244,24 +244,26 @@ export async function deleteItem(boardId: string, itemId: string): Promise<void>
 const MAX_RANGE_DAYS = 100;
 
 /**
- * Les événements des agendas d'un widget Calendrier sur une période. Les
- * liens des agendas sont déchiffrés et lus ici, côté serveur : ils ne
- * quittent jamais le serveur.
+ * Les événements des agendas d'un widget (Calendrier, ou Emploi du temps
+ * synchronisé) sur une période. Les liens sont déchiffrés et lus ici, côté
+ * serveur : ils ne quittent jamais le serveur.
  */
 export async function getCalendarEvents(boardId: string, dataId: string, fromIso: string, toIso: string): Promise<CalendarResult> {
   await requireRole(boardId, "member");
   const types = await typesOfList(boardId, dataId);
-  if (!types.includes("calendar")) return { events: [], errors: [] };
+  if (!types.includes("calendar") && !types.includes("school")) return { events: [], errors: [] };
 
   const from = new Date(fromIso);
   const to = new Date(toIso);
   const days = (to.getTime() - from.getTime()) / 86_400_000;
   if (!Number.isFinite(days) || days <= 0 || days > MAX_RANGE_DAYS) throw new Error("Période invalide.");
 
-  const sources = await db
+  const rows = await db
     .select({ id: dataItem.id, content: dataItem.content })
     .from(dataItem)
     .where(and(eq(dataItem.boardId, boardId), eq(dataItem.dataId, dataId)));
+  // Seuls les éléments qui portent un lien sont des agendas (les autres sont des créneaux saisis à la main).
+  const sources = rows.filter((row) => typeof row.content.url === "string");
 
   const result: CalendarResult = { events: [], errors: [] };
   await Promise.all(
@@ -270,8 +272,8 @@ export async function getCalendarEvents(boardId: string, dataId: string, fromIso
         const url = decryptSecret(String(source.content.url ?? ""));
         result.events.push(...(await loadCalendarEvents(source.id, url, from, to)));
       } catch (err) {
-        // Le message ne contient jamais le lien.
-        const message = err instanceof Error && !/https?:/i.test(err.message) ? err.message : "Agenda illisible.";
+        // Seuls nos propres messages sont montrés : ceux de l'analyseur peuvent citer le contenu de l'agenda.
+        const message = err instanceof CalendarError ? err.message : "Agenda illisible (format inattendu).";
         result.errors.push({ sourceId: source.id, message });
       }
     })

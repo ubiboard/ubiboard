@@ -22,7 +22,8 @@ une tablette ou un téléphone.
 - **Calendrier** : un ou plusieurs agendas connectés par leur lien iCal (Google Agenda, Outlook, iCloud,
   CalDAV…), chacun avec sa couleur. Quatre vues : mois, semaine, jour, liste. Lecture seule. Les liens sont
   chiffrés en base et lus uniquement par le serveur.
-- **Emploi du temps** : des créneaux saisis à la main pour chaque jour de la semaine, avec une couleur de fond.
+- **Emploi du temps** : des créneaux saisis à la main pour chaque jour de la semaine, avec une couleur de fond,
+  et/ou des cours synchronisés par un lien iCal (celui que fournit Ecole Directe, par exemple).
   Les créneaux à la même heure sont alignés d'un jour à l'autre, et les trous communs sont réduits.
 - **Configuration par widget** dans une modale générée depuis la définition du widget.
 - **Réglages d'écran** : atténuation et anti-rémanence.
@@ -147,7 +148,7 @@ dans la boutique, avec sa modale de réglages.
 
 1. Plusieurs boards par compte, partage entre membres et administrateurs.
 2. Lien public en lecture seule, vues personnelles, appairage d'un écran mural par code.
-3. Synchronisation des emplois du temps scolaires (Ecole Directe, Pronote), météo réelle.
+3. Météo réelle ; synchronisation Pronote.
 4. Rappels et alertes.
 5. Plugins communautaires isolés, décrits par un manifeste.
 6. Home Assistant et serveur MCP.

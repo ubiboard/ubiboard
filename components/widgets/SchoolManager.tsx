@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ManagerProps } from "@/lib/widgets";
 import { useWidgetData } from "@/lib/board-context";
 import type { DataItem } from "@/lib/board-types";
 import { WEEKDAYS_FROM_MONDAY, WEEKDAY_NAMES } from "@/lib/tasks";
-import { DEFAULT_SLOT_COLOR, SLOT_COLORS, isValidTime, toMinutes, type Slot } from "@/lib/timetable";
+import { getCalendarEvents } from "@/app/actions";
+import { useBoard } from "@/lib/board-context";
+import { DEFAULT_SLOT_COLOR, SLOT_COLORS, isIcalLink, isValidTime, toMinutes, type SchoolItem, type Slot } from "@/lib/timetable";
 import Icon from "@/components/Icon";
 import { ConfirmDialog } from "@/components/Modal";
 
@@ -14,7 +16,33 @@ const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 type Form = { name: string; start: string; end: string; color: string | null };
 
 export default function SchoolManager({ dataId, saved }: ManagerProps) {
-  const { items, loading, error, add, update, remove } = useWidgetData<Slot>(dataId);
+  const { boardId } = useBoard();
+  const { items: allItems, loading, error, add, update, remove } = useWidgetData<SchoolItem>(dataId);
+  // La liste mêle les créneaux saisis à la main et, éventuellement, le lien iCal de synchronisation.
+  const items = allItems.filter((it): it is DataItem<Slot> => !isIcalLink(it.content));
+  const link = allItems.find((it) => isIcalLink(it.content));
+  const [linkInput, setLinkInput] = useState("");
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [removeLink, setRemoveLink] = useState(false);
+  // Résultat de la dernière lecture du lien : nombre de cours sur 7 jours, ou raison de l'échec.
+  const [linkStatus, setLinkStatus] = useState<string | null>(null);
+
+  const linkId = link?.id ?? "";
+  useEffect(() => {
+    setLinkStatus(null);
+    if (!saved || !linkId || linkId.startsWith("tmp-")) return;
+    let cancelled = false;
+    const now = new Date();
+    getCalendarEvents(boardId, dataId, now.toISOString(), new Date(now.getTime() + 7 * 86_400_000).toISOString())
+      .then((result) => {
+        if (cancelled) return;
+        setLinkStatus(result.errors[0]?.message ?? `Lien lu : ${result.events.length} cours sur les 7 prochains jours.`);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [boardId, dataId, saved, linkId]);
   const [day, setDay] = useState(() => {
     const today = new Date().getDay();
     return today === 0 || today === 6 ? 1 : today; // le week-end, on ouvre sur le lundi
@@ -228,6 +256,71 @@ export default function SchoolManager({ dataId, saved }: ManagerProps) {
       )}
       {copied && <div className="task-phrase" role="status">{copied}</div>}
       <div className="dim small">Un créneau ajouté, modifié ou supprimé ici est enregistré tout de suite.</div>
+
+      <div className="modal-divider">Synchronisation par lien iCal</div>
+      {link && !linkOpen ? (
+        <div className="task-row">
+          <div className="task-row-text">
+            <span className="strong">Lien iCal enregistré</span>
+            <span className={/^Lien lu/.test(linkStatus ?? "") || !linkStatus ? "muted small" : "widget-error"} style={{ marginTop: 0 }}>
+              {linkStatus ?? "Lecture du lien…"}
+            </span>
+          </div>
+          <button className="btn-icon" aria-label="Remplacer le lien iCal" title="Remplacer" onClick={() => { setLinkInput(""); setLinkOpen(true); }}>
+            <Icon name="pencil" size={18} />
+          </button>
+          <button className="btn-icon" aria-label="Supprimer le lien iCal" title="Supprimer" onClick={() => setRemoveLink(true)}>
+            <Icon name="trash" size={18} />
+          </button>
+        </div>
+      ) : (
+        <div className="task-form" style={{ gap: 10 }}>
+          <div className="muted small">
+            Collez le lien iCal de l’emploi du temps (fourni par Ecole Directe, par exemple). Les cours s’ajoutent aux
+            créneaux saisis à la main et se mettent à jour tout seuls. Le lien est chiffré avant d’être enregistré et
+            n’est plus jamais affiché ensuite.
+          </div>
+          <input
+            className="input block"
+            type="url"
+            aria-label="Lien iCal de l’emploi du temps"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="https://…"
+            value={linkInput}
+            onChange={(e) => setLinkInput(e.target.value)}
+          />
+          <div className="modal-actions">
+            {link && <button className="btn" onClick={() => setLinkOpen(false)}>Annuler</button>}
+            <button
+              className="btn btn-primary"
+              disabled={!/^(https|webcal):\/\/\S+$/i.test(linkInput.trim())}
+              onClick={() => {
+                const content = { kind: "ical" as const, url: linkInput.trim() };
+                if (link) update(link.id, content);
+                else add(content);
+                setLinkInput("");
+                setLinkOpen(false);
+              }}
+            >
+              {link ? "Remplacer le lien" : "Connecter le lien"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {removeLink && link && (
+        <ConfirmDialog
+          title="Supprimer le lien iCal ?"
+          message="Les cours synchronisés ne seront plus affichés. Les créneaux saisis à la main sont conservés."
+          confirmLabel="Supprimer"
+          onCancel={() => setRemoveLink(false)}
+          onConfirm={() => {
+            remove(link.id);
+            setRemoveLink(false);
+          }}
+        />
+      )}
 
       {toDelete && (
         <ConfirmDialog

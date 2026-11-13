@@ -14,6 +14,14 @@ export type Slot = {
   color: string | null;
 };
 
+/** Le lien iCal qui synchronise l'emploi du temps. Le navigateur ne reçoit jamais le lien lui-même. */
+export type IcalLink = { kind: "ical"; hasUrl?: boolean; url?: string };
+
+/** Un élément de la liste de données du widget. */
+export type SchoolItem = Slot | IcalLink;
+
+export const isIcalLink = (item: SchoolItem): item is IcalLink => (item as IcalLink).kind === "ical";
+
 /** Couleurs de fond proposées pour un créneau (sombres, le texte reste clair). */
 export const SLOT_COLORS: { value: string | null; label: string }[] = [
   { value: null, label: "Gris" },
@@ -27,6 +35,19 @@ export const SLOT_COLORS: { value: string | null; label: string }[] = [
 ];
 
 export const DEFAULT_SLOT_COLOR = "#131316";
+
+/**
+ * Une couleur stable pour un cours synchronisé : la même matière a toujours la
+ * même couleur, sans que personne ait à la choisir.
+ */
+export function colorForTitle(title: string): string | null {
+  const palette = SLOT_COLORS.slice(1); // sans le gris, réservé aux créneaux sans intitulé
+  const key = title.trim().toLowerCase();
+  if (!key || key === "(sans titre)") return null;
+  let hash = 0;
+  for (const ch of key) hash = (hash * 31 + (ch.codePointAt(0) ?? 0)) >>> 0;
+  return palette[hash % palette.length].value;
+}
 
 export const toMinutes = (time: string) => parseInt(time.slice(0, 2), 10) * 60 + parseInt(time.slice(3, 5), 10);
 

@@ -18,9 +18,28 @@ export type ListPolicy = {
   prepare?: (content: Content, previous: Content | null) => Content;
 };
 
+/** Chiffre le lien fourni, ou conserve celui qui est déjà enregistré. */
+function sealedLink(content: Content, previous: Content | null): string {
+  const link = typeof content.url === "string" ? content.url.trim() : "";
+  const url = link ? encryptSecret(normalizeCalendarUrl(link)) : previous?.url;
+  if (!isEncrypted(url)) throw new Error("Indiquez le lien iCal.");
+  return url;
+}
+
 const POLICIES: Record<string, ListPolicy> = {
   chores: { adminWrite: true },
-  school: { adminWrite: true },
+  school: {
+    adminWrite: true,
+    secretFields: ["url"],
+    // La liste mêle des créneaux saisis à la main et, au plus, un lien iCal (kind: "ical").
+    prepare(content, previous) {
+      if (content.kind === "ical" || previous?.kind === "ical") {
+        return { kind: "ical", url: sealedLink(content, previous) };
+      }
+      const { url: _url, kind: _kind, ...slot } = content;
+      return slot;
+    },
+  },
   calendar: {
     adminWrite: true,
     secretFields: ["url"],
@@ -29,11 +48,8 @@ const POLICIES: Record<string, ListPolicy> = {
       const name = typeof content.name === "string" ? content.name.trim().slice(0, 60) : "";
       if (!name) throw new Error("Donnez un nom à l'agenda.");
       const color = typeof content.color === "string" && PERSON_COLORS.includes(content.color) ? content.color : PERSON_COLORS[0];
-      const link = typeof content.url === "string" ? content.url.trim() : "";
       // Lien non fourni en modification : on garde celui qui est enregistré.
-      const url = link ? encryptSecret(normalizeCalendarUrl(link)) : previous?.url;
-      if (!isEncrypted(url)) throw new Error("Indiquez le lien iCal de l'agenda.");
-      return { name, color, url };
+      return { name, color, url: sealedLink(content, previous) };
     },
   },
 };
