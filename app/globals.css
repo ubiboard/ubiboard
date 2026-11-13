@@ -391,6 +391,7 @@ button {
   text-transform: uppercase;
   color: var(--dim);
 }
+.modal-divider-note { margin-top: 6px; font-size: 13px; font-weight: 400; letter-spacing: 0; text-transform: none; }
 .modal-head {
   display: flex;
   align-items: flex-start;
@@ -622,6 +623,34 @@ button {
 }
 .check.on { border-color: var(--accent); background: var(--accent); }
 
+/* Barre de navigation d'un widget : flèches, retour à aujourd'hui, type de vue. */
+.school-bar { flex: none; display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.bar-btn {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  background: #141417;
+  border: 1px solid var(--border-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.bar-btn:hover { background: #1f1f24; }
+.bar-chip {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 18px;
+  border: 1px solid var(--accent-border);
+  background: transparent;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 500;
+}
+.segmented { margin-left: auto; display: inline-flex; border: 1px solid var(--border-3); border-radius: 18px; overflow: hidden; }
+.segmented button { height: 34px; padding: 0 14px; border: 0; background: transparent; font-size: 14px; font-weight: 500; color: var(--muted); }
+.segmented button.on { background: var(--accent); color: var(--accent-ink); }
 .school { flex: 1; min-height: 0; display: grid; gap: 12px; overflow: hidden; align-content: start; }
 .school-day { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .school-track { position: relative; }

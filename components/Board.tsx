@@ -431,7 +431,12 @@ export default function Board({
                   dataId={configWidget.dataId}
                   saved={saved.widgets.some((w) => w.id === configWidget.id)}
                 />
-                <div className="modal-divider">Réglages du widget</div>
+                <div className="modal-divider">
+                  Réglages du widget
+                  <div className="modal-divider-note">
+                    Contrairement à ce qui précède, ces réglages ne sont enregistrés qu’avec le bouton « Enregistrer » de la disposition.
+                  </div>
+                </div>
               </>
             )}
             <div>

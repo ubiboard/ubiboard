@@ -2,6 +2,8 @@ import {
   ArrowLeft,
   Calendar,
   Check,
+  ChevronLeft,
+  ChevronRight,
   Cloud,
   Copy,
   CloudRain,
@@ -44,6 +46,8 @@ const ICONS = {
   logout: LogOut,
   users: Users,
   copy: Copy,
+  previous: ChevronLeft,
+  next: ChevronRight,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICONS;
