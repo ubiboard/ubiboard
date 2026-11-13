@@ -11,8 +11,8 @@ const STARTER_WIDGETS: { type: string; x: number; y: number; w: number; h: numbe
   { type: "clock", x: 0, y: 0, w: 2, h: 1, showTitle: false, options: { secs: "off" } },
   { type: "weather", x: 0, y: 1, w: 2, h: 1, showTitle: true, options: { unit: "C" } },
   { type: "calendar", x: 2, y: 0, w: 6, h: 2, showTitle: true, options: { who: "Tous" } },
-  { type: "chores", x: 0, y: 2, w: 2, h: 3, showTitle: true, options: { who: "Tous" } },
-  { type: "school", x: 2, y: 2, w: 4, h: 3, showTitle: true, options: { kid: "Léo", span: "2j" } },
+  { type: "chores", x: 0, y: 2, w: 2, h: 3, showTitle: true, options: { who: "all" } },
+  { type: "school", x: 2, y: 2, w: 4, h: 3, showTitle: true, options: { who: "all", span: "2j" } },
   { type: "shopping", x: 6, y: 2, w: 2, h: 3, showTitle: true, options: { done: "show" } },
 ];
 

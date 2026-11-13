@@ -31,7 +31,7 @@ function resolveBaseURL(): BetterAuthOptions["baseURL"] {
   };
 }
 
-export const MIN_PASSWORD_LENGTH = 6;
+export const MIN_PASSWORD_LENGTH = 8;
 
 const DAY = 60 * 60 * 24;
 

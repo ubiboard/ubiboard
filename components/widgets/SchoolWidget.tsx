@@ -1,57 +1,82 @@
 "use client";
 
 import { registerWidget, type WidgetProps } from "@/lib/widgets";
+import { useWidgetData } from "@/lib/board-context";
 import { useNow } from "@/lib/hooks";
-import { DAYS_SHORT, KIDS, SCHOOL } from "@/lib/demo-data";
+import { DAYS_SHORT } from "@/lib/demo-data";
+import { DEFAULT_SLOT_COLOR, buildAxis, toMinutes, type Slot } from "@/lib/timetable";
+import SchoolManager from "./SchoolManager";
 
-const toMinutes = (t: string) => parseInt(t.slice(0, 2), 10) * 60 + parseInt(t.slice(3), 10);
+const HEAD_HEIGHT = 36; // en-tête de jour + marge
 
-function School({ w, bodyHeight, options }: WidgetProps) {
+function School({ bodyHeight, options, dataId }: WidgetProps) {
+  const { items, loading, error } = useWidgetData<Slot>(dataId);
   const now = useNow(60_000);
-  const week = options.span === "week";
   const nowMin = now.getHours() * 60 + now.getMinutes();
+  const week = options.span === "week";
 
-  // Décalages en jours par rapport à aujourd'hui : [0, 1] ou lundi → vendredi.
+  // Jours affichés, en décalage par rapport à aujourd'hui.
   let offsets = [0, 1];
   if (week) {
-    const dow = now.getDay();
-    const monday = dow === 0 ? 1 : dow === 6 ? 2 : 1 - dow;
-    offsets = [0, 1, 2, 3, 4].map((k) => monday + k);
+    const fromMonday = (now.getDay() + 6) % 7;
+    const hasWeekend = items.some((it) => it.content.day === 6 || it.content.day === 0);
+    offsets = Array.from({ length: hasWeekend ? 7 : 5 }, (_, k) => k - fromMonday);
   }
-  const stacked = week || w < 4;
-  const limit = Math.max(2, Math.floor((bodyHeight - 36) / (stacked ? 58 : 44)));
+  const days = offsets.map((offset) => {
+    const date = new Date(now);
+    date.setDate(now.getDate() + offset);
+    const short = `${DAYS_SHORT[date.getDay()]} ${date.getDate()}`;
+    return {
+      offset,
+      today: offset === 0,
+      label: week ? short : `${offset === 0 ? "Aujourd’hui" : "Demain"} · ${short}`,
+      slots: items.filter((it) => it.content.day === date.getDay()),
+    };
+  });
+
+  // Un seul axe pour tous les jours affichés : les cours à la même heure sont alignés.
+  const shown = days.flatMap((d) => d.slots.map((it) => it.content));
+  const axis = buildAxis(shown, bodyHeight - HEAD_HEIGHT);
+
+  if (loading) return <div className="dim small">Chargement…</div>;
+  if (error) return <div className="widget-error">{error}</div>;
+  if (items.length === 0) return <div className="dim small">Aucun créneau pour l’instant.</div>;
 
   return (
-    <div className="school" style={{ gridTemplateColumns: `repeat(${offsets.length}, minmax(0, 1fr))` }}>
-      {offsets.map((offset) => {
-        const d = new Date(now);
-        d.setDate(now.getDate() + offset);
-        const today = offset === 0;
-        const short = `${DAYS_SHORT[d.getDay()]} ${d.getDate()}`;
-        const label = week ? short : `${today ? "Aujourd’hui" : "Demain"} · ${short}`;
-        const slots = SCHOOL[options.kid]?.[d.getDay()] ?? [];
-        return (
-          <div key={offset} className="school-day">
-            <div className={"day-head" + (today ? " today" : "")}>
-              <span className="day-label ellipsis">{label}</span>
-            </div>
-            {slots.length === 0 && <div className="dim small">Pas de cours</div>}
-            {slots.slice(0, limit).map(([start, end, subject]) => {
-              const current = today && nowMin >= toMinutes(start) && nowMin < toMinutes(end);
-              const past = today && nowMin >= toMinutes(end);
-              return (
-                <div
-                  key={start}
-                  className={"slot" + (stacked ? " stacked" : "") + (current ? " current" : "") + (past ? " past" : "")}
-                >
-                  <span className="slot-time">{start}</span>
-                  <span className="slot-name">{subject}</span>
-                </div>
-              );
-            })}
+    <div className="school" style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }}>
+      {days.map((day) => (
+        <div key={day.offset} className="school-day">
+          <div className={"day-head" + (day.today ? " today" : "")}>
+            <span className="day-label ellipsis">{day.label}</span>
           </div>
-        );
-      })}
+          {day.slots.length === 0 ? (
+            <div className="dim small">Rien de prévu</div>
+          ) : (
+            <div className="school-track" style={{ height: axis.height }}>
+              {day.slots.map((it) => {
+                const slot = it.content;
+                const start = toMinutes(slot.start);
+                const end = toMinutes(slot.end);
+                const top = axis.y(start);
+                const height = Math.max(axis.y(end) - top, 18);
+                const current = day.today && nowMin >= start && nowMin < end;
+                const past = day.today && nowMin >= end;
+                return (
+                  <div
+                    key={it.id}
+                    className={"slot" + (height < 42 ? " compact" : "") + (current ? " current" : "") + (past ? " past" : "")}
+                    style={{ top, height, background: slot.color ?? DEFAULT_SLOT_COLOR }}
+                    title={`${slot.start} – ${slot.end} · ${slot.name}`}
+                  >
+                    <span className="slot-time">{slot.start}</span>
+                    <span className="slot-name">{slot.name}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -59,12 +84,13 @@ function School({ w, bodyHeight, options }: WidgetProps) {
 registerWidget({
   type: "school",
   name: "Emploi du temps",
-  description: "Aujourd’hui et demain, ou toute la semaine, pour chaque enfant.",
+  description: "Les créneaux de la semaine, saisis à la main : aujourd’hui et demain, ou toute la semaine.",
   source: "default",
-  access: "emplois du temps (lecture)",
-  sizes: { min: [2, 2], default: [4, 3], max: [8, 3] },
+  access: "emploi du temps du board (lecture ; écriture par les administrateurs)",
+  storesData: true,
+  sizes: { min: [2, 2], default: [4, 3], max: [8, 5] },
   options: [
-    { key: "kid", label: "Enfant", choices: KIDS.map((k) => ({ value: k, label: k })) },
+    { key: "who", label: "Pour qui", choices: "people" },
     {
       key: "span",
       label: "Affichage",
@@ -74,8 +100,14 @@ registerWidget({
       ],
     },
   ],
-  defaultOptions: { kid: KIDS[0], span: "2j" },
+  defaultOptions: { who: "all", span: "2j" },
   defaultShowTitle: true,
-  title: (o) => `Emploi du temps · ${o.kid}`,
+  // Le nom de la personne choisie complète le titre.
+  title: (options, people) => {
+    const person = people.find((p) => p.userId === options.who);
+    return "Emploi du temps" + (person ? ` · ${person.name}` : "");
+  },
   Component: School,
+  Manager: SchoolManager,
+  managerTitle: "Emploi du temps",
 });

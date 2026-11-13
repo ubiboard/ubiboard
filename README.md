@@ -4,8 +4,8 @@ Hub familial open source, web et auto-hébergeable : un écran d'accueil façon 
 redimensionnables et configurables, pensé pour un écran mural tactile mais accessible aussi depuis un PC,
 une tablette ou un téléphone.
 
-> Projet à ses débuts. Les tâches, la liste de courses et le mot de la famille sont réels et enregistrés en
-> base ; le calendrier, l'emploi du temps et la météo affichent encore des **données factices** : aucun
+> Projet à ses débuts. Les tâches, l'emploi du temps, la liste de courses et le mot de la famille sont réels
+> et enregistrés en base ; le calendrier et la météo affichent encore des **données factices** : aucun
 > connecteur (agenda, météo, école, domotique) n'est branché.
 
 ## Ce qui fonctionne
@@ -20,6 +20,8 @@ une tablette ou un téléphone.
   Chacun adapte son affichage à sa taille.
 - **Tâches** : ponctuelles ou récurrentes (chaque N jours, semaines, mois ou années), affectées à une ou plusieurs
   personnes avec roulement automatique. Le widget montre qui doit faire quoi aujourd'hui.
+- **Emploi du temps** : des créneaux saisis à la main pour chaque jour de la semaine, avec une couleur de fond.
+  Les créneaux à la même heure sont alignés d'un jour à l'autre, et les trous communs sont réduits.
 - **Configuration par widget** dans une modale générée depuis la définition du widget.
 - **Réglages d'écran** : atténuation et anti-rémanence.
 - **Vue téléphone** : mêmes widgets empilés, avec une barre d'onglets (sans mode édition).
@@ -93,6 +95,7 @@ celui qu'il a rejoint en dernier.
 | `lib/auth.ts`, `scripts/user.ts` | Connexion (Better Auth) et gestion des comptes en ligne de commande |
 | `scripts/board.ts` | Ajout et retrait de personnes sur un board en ligne de commande |
 | `lib/tasks.ts` | Récurrence et roulement des tâches (calcul et phrases en clair) |
+| `lib/timetable.ts` | Créneaux de l'emploi du temps et calcul de leur position |
 | `lib/demo-data.ts` | Données factices |
 
 ## Ajouter un widget
@@ -137,7 +140,7 @@ dans la boutique, avec sa modale de réglages.
 1. Plusieurs boards par compte, partage entre membres et administrateurs.
 2. Lien public en lecture seule, vues personnelles, appairage d'un écran mural par code.
 3. Premier vrai connecteur : calendrier (Google Calendar, CalDAV).
-4. Emplois du temps scolaires (saisie manuelle, Ecole Directe, Pronote), météo réelle.
+4. Synchronisation des emplois du temps scolaires (Ecole Directe, Pronote), météo réelle.
 5. Plugins communautaires isolés, décrits par un manifeste.
 6. Home Assistant et serveur MCP.
 

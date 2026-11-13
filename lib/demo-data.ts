@@ -4,7 +4,6 @@
  */
 
 export const MEMBERS = ["Camille", "Alex", "Léo", "Jade"] as const;
-export const KIDS = ["Léo", "Jade"] as const;
 export const CITY = "Paris";
 
 export const MEMBER_COLORS: Record<string, string> = {
@@ -56,29 +55,4 @@ export const WEATHER = {
     { offset: 4, hi: 11, lo: 5, kind: "cloud" },
     { offset: 5, hi: 10, lo: 6, kind: "rain" },
   ] as { offset: number; hi: number; lo: number; kind: WeatherKind }[],
-};
-
-export type Slot = [start: string, end: string, subject: string];
-
-const PRIMARY_HOURS: [string, string][] = [
-  ["08:30", "09:30"], ["09:30", "10:45"], ["11:00", "12:00"], ["13:30", "14:30"], ["14:30", "16:00"],
-];
-const primary = (subjects: string[]): Slot[] =>
-  subjects.map((s, i) => [PRIMARY_HOURS[i][0], PRIMARY_HOURS[i][1], s]);
-
-/** Emploi du temps par enfant, puis par jour de la semaine (1 = lundi). */
-export const SCHOOL: Record<string, Record<number, Slot[]>> = {
-  Léo: {
-    1: [["08:00", "09:00", "Maths"], ["09:00", "10:00", "Français"], ["10:10", "11:10", "Anglais"], ["11:10", "12:10", "EPS"], ["13:30", "14:30", "Histoire-géo"], ["14:30", "15:30", "SVT"]],
-    2: [["08:00", "09:00", "Français"], ["09:00", "10:00", "Techno"], ["10:10", "11:10", "Maths"], ["11:10", "12:10", "Histoire-géo"], ["14:30", "15:30", "Anglais"]],
-    3: [["08:00", "09:00", "Maths"], ["09:00", "10:00", "Physique"], ["10:10", "11:10", "Musique"]],
-    4: [["08:00", "09:00", "Anglais"], ["09:00", "10:00", "Maths"], ["10:10", "11:10", "SVT"], ["11:10", "12:10", "Français"], ["13:30", "14:30", "EPS"], ["14:30", "15:30", "Arts plastiques"]],
-    5: [["08:00", "09:00", "Histoire-géo"], ["09:00", "10:00", "Français"], ["10:10", "11:10", "Physique"], ["11:10", "12:10", "Maths"], ["13:30", "14:30", "Techno"]],
-  },
-  Jade: {
-    1: primary(["Lecture", "Maths", "Anglais", "Sport", "Arts plastiques"]),
-    2: primary(["Maths", "Écriture", "Sciences", "Lecture", "Histoire"]),
-    4: primary(["Lecture", "Maths", "Musique", "Sport", "Géographie"]),
-    5: primary(["Maths", "Dictée", "Anglais", "Sciences"]),
-  },
 };

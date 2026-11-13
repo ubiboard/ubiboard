@@ -107,7 +107,7 @@ export async function setPersonColor(boardId: string, userId: string, color: str
  * administrateurs du board (les membres les lisent). Les autres listes sont
  * modifiables par tous les membres.
  */
-const ADMIN_WRITE_TYPES = new Set(["chores"]);
+const ADMIN_WRITE_TYPES = new Set(["chores", "school"]);
 
 /**
  * Vérifie que l'utilisateur connecté peut écrire dans cette liste, qui doit

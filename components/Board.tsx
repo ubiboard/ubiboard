@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import GridLayout, { useContainerWidth, type EventCallback, type Layout, type LayoutItem } from "react-grid-layout";
 import { countItems, saveBoardView, setPersonColor } from "@/app/actions";
 import { authClient } from "@/lib/auth-client";
-import { BoardProvider } from "@/lib/board-context";
+import { BoardProvider, useBoard } from "@/lib/board-context";
 import { GRID_COLS, PERSON_COLORS, type BoardRole, type BoardState, type Person, type PlacedWidget } from "@/lib/board-types";
 import { createPushCompactor, type MoveSession } from "@/lib/placement";
 import { getWidget, listWidgets } from "@/lib/widgets";
@@ -47,8 +47,8 @@ function useIsPhone(): boolean {
 }
 
 /** Le titre affiché : celui choisi par l'utilisateur, sinon celui du widget. */
-function widgetTitle(widget: PlacedWidget): string {
-  return widget.title?.trim() || getWidget(widget.type)?.title(widget.options) || "";
+function widgetTitle(widget: PlacedWidget, people: Person[]): string {
+  return widget.title?.trim() || getWidget(widget.type)?.title(widget.options, people) || "";
 }
 
 /** Le cadre commun à tous les widgets : titre + contenu fourni par le plugin. */
@@ -64,9 +64,10 @@ function WidgetFrame({
   /** Hauteur totale en pixels du cadre. */
   height: number;
 }) {
+  const { people } = useBoard();
   const def = getWidget(widget.type);
   if (!def) return null;
-  const title = widgetTitle(widget);
+  const title = widgetTitle(widget, people);
   const bodyHeight = height - 38 - (widget.showTitle ? 26 : 0);
   return (
     <section className="widget" aria-label={title}>
@@ -439,7 +440,7 @@ export default function Board({
                 id="widget-title"
                 className="input block"
                 maxLength={80}
-                placeholder={configDef.title(configWidget.options)}
+                placeholder={configDef.title(configWidget.options, people)}
                 value={configWidget.title ?? ""}
                 onChange={(e) => patchWidget(configWidget.id, { title: e.target.value || null })}
               />
@@ -492,7 +493,7 @@ export default function Board({
 
         {toRemove && (
           <ConfirmDialog
-            title={`Supprimer « ${widgetTitle(toRemove.widget)} » ?`}
+            title={`Supprimer « ${widgetTitle(toRemove.widget, people)} » ?`}
             message={
               toRemove.count > 1
                 ? `Ce widget contient ${toRemove.count} éléments. Ils seront définitivement supprimés quand vous enregistrerez.`

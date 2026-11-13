@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import type { Person } from "@/lib/board-types";
 
 /**
  * Registre central des widgets.
@@ -62,7 +63,7 @@ export type WidgetDefinition = {
   /** Le titre est-il affiché par défaut à l'ajout ? */
   defaultShowTitle: boolean;
   /** Titre affiché en haut du widget (peut dépendre des réglages). */
-  title: (options: WidgetOptions) => string;
+  title: (options: WidgetOptions, people: Person[]) => string;
   Component: ComponentType<WidgetProps>;
   /**
    * Fenêtre de gestion des données du widget (créer, modifier, supprimer),
