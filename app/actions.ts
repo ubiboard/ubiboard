@@ -2,7 +2,7 @@
 
 import { and, asc, count, eq, isNull, notInArray, sql } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
-import { getRole } from "@/lib/boards";
+import { getRole, loadBoardView } from "@/lib/boards";
 import { db, schema } from "@/lib/db";
 import { GRID_COLS, PERSON_COLORS, type BoardRole, type BoardState, type DataItem } from "@/lib/board-types";
 
@@ -89,6 +89,34 @@ export async function saveBoardView(boardId: string, state: BoardState): Promise
       .where(eq(view.boardId, boardId));
     await tx.delete(dataItem).where(and(eq(dataItem.boardId, boardId), notInArray(dataItem.dataId, stillUsed)));
   });
+}
+
+/** La vue du board telle qu'elle est enregistrée : sert à suivre les changements faits sur un autre appareil. */
+export async function getBoardView(boardId: string): Promise<BoardState> {
+  await requireRole(boardId, "member");
+  return loadBoardView(boardId);
+}
+
+/**
+ * Réglages qu'un simple membre peut changer en utilisant le widget (et non en
+ * le configurant) : par exemple passer l'emploi du temps de « jours » à
+ * « semaine ». Le changement vaut pour tous les appareils du board.
+ */
+const USAGE_OPTIONS: Record<string, Record<string, string[]>> = {
+  school: { span: ["2j", "week"] },
+};
+
+export async function setWidgetOption(boardId: string, widgetId: string, key: string, value: string): Promise<void> {
+  await requireRole(boardId, "member");
+  if (!UUID.test(widgetId)) throw new Error("Widget inconnu.");
+  const [found] = await db
+    .select({ id: widget.id, type: widget.type, options: widget.options })
+    .from(widget)
+    .innerJoin(view, eq(view.id, widget.viewId))
+    .where(and(eq(widget.id, widgetId), eq(view.boardId, boardId), isNull(view.userId)));
+  if (!found) throw new Error("Widget inconnu.");
+  if (!USAGE_OPTIONS[found.type]?.[key]?.includes(value)) throw new Error("Réglage non autorisé.");
+  await db.update(widget).set({ options: { ...found.options, [key]: value } }).where(eq(widget.id, widgetId));
 }
 
 /** Change la couleur d'une personne du board : un administrateur, ou la personne elle-même. */

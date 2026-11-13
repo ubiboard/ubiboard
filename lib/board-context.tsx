@@ -10,6 +10,8 @@ type BoardInfo = {
   role: BoardRole;
   /** Les personnes du board (comptes qui y ont accès), avec leur couleur. */
   people: Person[];
+  /** Change un réglage d'usage d'un widget, pour tous les appareils. */
+  setWidgetOption: (widgetId: string, key: string, value: string) => void;
 };
 
 const BoardContext = createContext<BoardInfo | null>(null);

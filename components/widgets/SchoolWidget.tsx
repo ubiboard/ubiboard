@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { registerWidget, type WidgetProps } from "@/lib/widgets";
 import { useWidgetData } from "@/lib/board-context";
-import { useDeviceChoice, useNow } from "@/lib/hooks";
+import { useNow } from "@/lib/hooks";
 import { DAYS_SHORT } from "@/lib/demo-data";
 import { DEFAULT_SLOT_COLOR, buildAxis, toMinutes, type Slot } from "@/lib/timetable";
 import Icon from "@/components/Icon";
@@ -15,13 +15,14 @@ const BACK_TO_TODAY_MS = 2 * 60_000;
 
 type View = "2j" | "week";
 
-function School({ bodyHeight, options, dataId }: WidgetProps) {
+function School({ bodyHeight, options, dataId, setOption }: WidgetProps) {
   const { items, loading, error } = useWidgetData<Slot>(dataId);
   const now = useNow(60_000);
   const nowMin = now.getHours() * 60 + now.getMinutes();
 
-  // Le type de vue choisi sur cet appareil est mémorisé ; sinon on suit le réglage du widget.
-  const [view, setView] = useDeviceChoice<View>(`ubiboard-school-view:${dataId}`, options.span === "week" ? "week" : "2j");
+  // Le type de vue est un réglage du widget, commun à tous les appareils du board.
+  const view: View = options.span === "week" ? "week" : "2j";
+  const setView = (next: View) => setOption("span", next);
   // Décalage par rapport à aujourd'hui : en jours (vue jours) ou en semaines (vue semaine).
   const [shift, setShift] = useState(0);
   const week = view === "week";
@@ -132,7 +133,7 @@ registerWidget({
     { key: "who", label: "Pour qui", choices: "people" },
     {
       key: "span",
-      label: "Vue par défaut",
+      label: "Vue",
       choices: [
         { value: "2j", label: "Jours" },
         { value: "week", label: "Semaine" },

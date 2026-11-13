@@ -37,6 +37,11 @@ export type WidgetProps = {
   options: WidgetOptions;
   /** Identifiant de la liste de données du widget (voir useWidgetData). */
   dataId: string;
+  /**
+   * Change un réglage depuis le widget lui-même, pour tous les appareils du
+   * board. Réservé aux réglages d'usage déclarés côté serveur (USAGE_OPTIONS).
+   */
+  setOption: (key: string, value: string) => void;
 };
 
 export type WidgetDefinition = {

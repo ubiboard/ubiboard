@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import GridLayout, { useContainerWidth, type EventCallback, type Layout, type LayoutItem } from "react-grid-layout";
-import { countItems, saveBoardView, setPersonColor } from "@/app/actions";
+import { countItems, getBoardView, saveBoardView, setPersonColor, setWidgetOption } from "@/app/actions";
 import { authClient } from "@/lib/auth-client";
 import { BoardProvider, useBoard } from "@/lib/board-context";
 import { GRID_COLS, PERSON_COLORS, type BoardRole, type BoardState, type Person, type PlacedWidget } from "@/lib/board-types";
@@ -64,7 +64,7 @@ function WidgetFrame({
   /** Hauteur totale en pixels du cadre. */
   height: number;
 }) {
-  const { people } = useBoard();
+  const { people, setWidgetOption: setOptionOf } = useBoard();
   const def = getWidget(widget.type);
   if (!def) return null;
   const title = widgetTitle(widget, people);
@@ -73,7 +73,14 @@ function WidgetFrame({
     <section className="widget" aria-label={title}>
       {widget.showTitle && <h2 className="widget-title">{title}</h2>}
       <div className="widget-body">
-        <def.Component w={w} h={h} bodyHeight={bodyHeight} options={widget.options} dataId={widget.dataId} />
+        <def.Component
+          w={w}
+          h={h}
+          bodyHeight={bodyHeight}
+          options={widget.options}
+          dataId={widget.dataId}
+          setOption={(key, value) => setOptionOf(widget.id, key, value)}
+        />
       </div>
     </section>
   );
@@ -119,7 +126,47 @@ export default function Board({
 
   const isPhone = mounted && phone;
   const state = editing ? draft : saved;
-  const boardInfo = useMemo(() => ({ boardId, role, people }), [boardId, role, people]);
+  /** Relit la vue enregistrée : un autre appareil a pu changer un réglage ou la disposition. */
+  const refreshView = useCallback(async () => {
+    try {
+      const fresh = await getBoardView(boardId);
+      setSaved((current) => (JSON.stringify(current) === JSON.stringify(fresh) ? current : fresh));
+    } catch {
+      /* hors ligne : on garde l'affichage actuel */
+    }
+  }, [boardId]);
+
+  // Hors mode édition, on suit la vue enregistrée (toutes les minutes et au retour sur la page).
+  useEffect(() => {
+    if (editing) return;
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") refreshView();
+    }, 60_000);
+    window.addEventListener("focus", refreshView);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", refreshView);
+    };
+  }, [editing, refreshView]);
+
+  /** Réglage changé depuis un widget : appliqué tout de suite, enregistré pour tous les appareils. */
+  const changeWidgetOption = useCallback(
+    (widgetId: string, key: string, value: string) => {
+      const apply = (state: BoardState): BoardState => ({
+        ...state,
+        widgets: state.widgets.map((w) => (w.id === widgetId ? { ...w, options: { ...w.options, [key]: value } } : w)),
+      });
+      setSaved(apply);
+      setDraft(apply);
+      setWidgetOption(boardId, widgetId, key, value).catch(refreshView);
+    },
+    [boardId, refreshView]
+  );
+
+  const boardInfo = useMemo(
+    () => ({ boardId, role, people, setWidgetOption: changeWidgetOption }),
+    [boardId, role, people, changeWidgetOption]
+  );
 
   const closePanels = () => {
     setConfigId(null);
