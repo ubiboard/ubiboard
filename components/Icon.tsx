@@ -16,6 +16,7 @@ import {
   SlidersHorizontal,
   Sun,
   Trash2,
+  Users,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -40,6 +41,7 @@ const ICONS = {
   cloud: Cloud,
   rain: CloudRain,
   logout: LogOut,
+  users: Users,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICONS;

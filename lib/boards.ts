@@ -1,10 +1,10 @@
 import "server-only";
 import { randomBytes, randomUUID } from "node:crypto";
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import type { BoardRole, BoardState } from "@/lib/board-types";
+import { PERSON_COLORS, type BoardRole, type BoardState, type Person } from "@/lib/board-types";
 
-const { board, boardMember, view, widget } = schema;
+const { board, boardMember, view, widget, user } = schema;
 
 /** Vue de départ d'un nouveau board. */
 const STARTER_WIDGETS: { type: string; x: number; y: number; w: number; h: number; showTitle: boolean; options: Record<string, string> }[] = [
@@ -56,13 +56,15 @@ function firstBoardOf(tx: Tx | typeof db, userId: string): Promise<BoardAccess[]
     .from(boardMember)
     .innerJoin(board, eq(board.id, boardMember.boardId))
     .where(eq(boardMember.userId, userId))
-    .orderBy(asc(boardMember.createdAt), asc(board.id))
+    // Le board rejoint le plus récemment : quand on ajoute quelqu'un au board
+    // familial, c'est celui-là qu'il voit, même s'il avait déjà le sien.
+    .orderBy(desc(boardMember.createdAt), asc(board.id))
     .limit(1);
 }
 
 /**
  * Le board à afficher pour cet utilisateur. Tant qu'il n'y a pas de liste de
- * boards dans l'interface, c'est le premier auquel il a accès ; s'il n'en a
+ * boards dans l'interface, c'est le dernier qu'il a rejoint ; s'il n'en a
  * aucun, on lui en crée un.
  */
 export async function getOrCreateHomeBoard(userId: string): Promise<BoardAccess> {
@@ -76,6 +78,18 @@ export async function getOrCreateHomeBoard(userId: string): Promise<BoardAccess>
     const [existing] = await firstBoardOf(tx, userId);
     return existing ?? createBoardIn(tx, userId, "Maison");
   });
+}
+
+/** Les personnes du board, dans l'ordre où elles l'ont rejoint. */
+export async function listPeople(boardId: string): Promise<Person[]> {
+  const rows = await db
+    .select({ userId: user.id, name: user.name, role: boardMember.role, color: boardMember.color })
+    .from(boardMember)
+    .innerJoin(user, eq(user.id, boardMember.userId))
+    .where(eq(boardMember.boardId, boardId))
+    .orderBy(asc(boardMember.createdAt), asc(user.id));
+  // Sans couleur choisie, chacun reçoit une couleur différente de la palette.
+  return rows.map((r, i) => ({ ...r, color: r.color ?? PERSON_COLORS[i % PERSON_COLORS.length] }));
 }
 
 /** La vue du board (celle qui est partagée par tous). */

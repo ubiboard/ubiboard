@@ -13,7 +13,10 @@
     "db:migrate": "node --env-file=.env.local node_modules/drizzle-kit/bin.cjs migrate",
     "user:create": "node --env-file=.env.local --import tsx scripts/user.ts create",
     "user:password": "node --env-file=.env.local --import tsx scripts/user.ts password",
-    "user:list": "node --env-file=.env.local --import tsx scripts/user.ts list"
+    "user:list": "node --env-file=.env.local --import tsx scripts/user.ts list",
+    "board:list": "node --env-file=.env.local --import tsx scripts/board.ts list",
+    "board:add": "node --env-file=.env.local --import tsx scripts/board.ts add",
+    "board:remove": "node --env-file=.env.local --import tsx scripts/board.ts remove"
   },
   "dependencies": {
     "better-auth": "^1.7.22",

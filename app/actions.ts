@@ -4,9 +4,9 @@ import { and, asc, count, eq, isNull, notInArray, sql } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { getRole } from "@/lib/boards";
 import { db, schema } from "@/lib/db";
-import { GRID_COLS, type BoardRole, type BoardState, type DataItem } from "@/lib/board-types";
+import { GRID_COLS, PERSON_COLORS, type BoardRole, type BoardState, type DataItem } from "@/lib/board-types";
 
-const { view, widget, dataItem } = schema;
+const { view, widget, dataItem, boardMember } = schema;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_WIDGETS = 60;
@@ -89,6 +89,17 @@ export async function saveBoardView(boardId: string, state: BoardState): Promise
       .where(eq(view.boardId, boardId));
     await tx.delete(dataItem).where(and(eq(dataItem.boardId, boardId), notInArray(dataItem.dataId, stillUsed)));
   });
+}
+
+/** Change la couleur d'une personne du board : un administrateur, ou la personne elle-même. */
+export async function setPersonColor(boardId: string, userId: string, color: string): Promise<void> {
+  const { user, role } = await requireRole(boardId, "member");
+  if (role !== "admin" && user.id !== userId) throw new Error("Réservé aux administrateurs du board.");
+  if (!PERSON_COLORS.includes(color)) throw new Error("Couleur inconnue.");
+  await db
+    .update(boardMember)
+    .set({ color })
+    .where(and(eq(boardMember.boardId, boardId), eq(boardMember.userId, userId)));
 }
 
 /** Vérifie que cette liste est bien affichée par un widget du board. */

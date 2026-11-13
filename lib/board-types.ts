@@ -28,4 +28,19 @@ export type BoardState = {
 /** Un élément de données d'un widget (un article, une note…). */
 export type DataItem<T = Record<string, unknown>> = { id: string; content: T };
 
+/** Une personne du board : un compte qui y a accès. */
+export type Person = { userId: string; name: string; role: BoardRole; color: string };
+
+/** Couleurs proposées pour les personnes (lisibles sur fond noir). */
+export const PERSON_COLORS = [
+  "#7FB2FF",
+  "#FFAB66",
+  "#E59CF0",
+  "#F5D76E",
+  "#8FE3B8",
+  "#FF9B8A",
+  "#8FDDE3",
+  "#C9C9D1",
+];
+
 export const GRID_COLS = 8;

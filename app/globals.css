@@ -407,6 +407,12 @@ button {
 }
 .modal-actions { display: flex; justify-content: flex-end; gap: 12px; }
 .setting-text { display: flex; flex-direction: column; gap: 4px; }
+.person { display: flex; flex-direction: column; gap: 10px; }
+.person-head { display: flex; align-items: center; gap: 10px; }
+.person-name { flex: 1; min-width: 0; font-size: 17px; font-weight: 500; }
+.swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.swatch { width: 36px; height: 36px; border-radius: 18px; border: 2px solid transparent; padding: 0; }
+.swatch.on { border-color: var(--text); box-shadow: 0 0 0 2px var(--bg) inset; }
 .info-box {
   border: 1px solid var(--border);
   border-radius: 18px;

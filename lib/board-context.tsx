@@ -2,9 +2,15 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { addItem, deleteItem, listItems, updateItem } from "@/app/actions";
-import type { BoardRole, DataItem } from "@/lib/board-types";
+import type { BoardRole, DataItem, Person } from "@/lib/board-types";
 
-type BoardInfo = { boardId: string; role: BoardRole };
+type BoardInfo = {
+  boardId: string;
+  /** Le rôle de l'utilisateur connecté sur ce board. */
+  role: BoardRole;
+  /** Les personnes du board (comptes qui y ont accès), avec leur couleur. */
+  people: Person[];
+};
 
 const BoardContext = createContext<BoardInfo | null>(null);
 export const BoardProvider = BoardContext.Provider;

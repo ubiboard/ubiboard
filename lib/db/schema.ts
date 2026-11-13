@@ -94,6 +94,8 @@ export const boardMember = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     role: text("role").$type<BoardRole>().notNull(),
+    // Couleur de la personne sur ce board ; vide = couleur attribuée d'office.
+    color: text("color"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.boardId, t.userId] }), index("board_member_user_idx").on(t.userId)]

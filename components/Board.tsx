@@ -4,10 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import GridLayout, { useContainerWidth, type EventCallback, type Layout, type LayoutItem } from "react-grid-layout";
-import { countItems, saveBoardView } from "@/app/actions";
+import { countItems, saveBoardView, setPersonColor } from "@/app/actions";
 import { authClient } from "@/lib/auth-client";
 import { BoardProvider } from "@/lib/board-context";
-import { GRID_COLS, type BoardRole, type BoardState, type PlacedWidget } from "@/lib/board-types";
+import { GRID_COLS, PERSON_COLORS, type BoardRole, type BoardState, type Person, type PlacedWidget } from "@/lib/board-types";
 import { createPushCompactor, type MoveSession } from "@/lib/placement";
 import { getWidget, listWidgets } from "@/lib/widgets";
 import { DAYS, MONTHS } from "@/lib/demo-data";
@@ -83,11 +83,13 @@ export default function Board({
   boardName,
   role,
   initialState,
+  initialPeople,
 }: {
   boardId: string;
   boardName: string;
   role: BoardRole;
   initialState: BoardState;
+  initialPeople: Person[];
 }) {
   const router = useRouter();
   const isAdmin = role === "admin";
@@ -102,6 +104,9 @@ export default function Board({
   const [configId, setConfigId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [screenOpen, setScreenOpen] = useState(false);
+  const [people, setPeople] = useState<Person[]>(initialPeople);
+  const [peopleOpen, setPeopleOpen] = useState(false);
+  const [peopleError, setPeopleError] = useState<string | null>(null);
   // Suppression en attente de confirmation (le widget a des données).
   const [toRemove, setToRemove] = useState<{ widget: PlacedWidget; count: number } | null>(null);
   // Widget en cours de déplacement ou de redimensionnement, avec sa taille en direct.
@@ -113,12 +118,26 @@ export default function Board({
 
   const isPhone = mounted && phone;
   const state = editing ? draft : saved;
-  const boardInfo = useMemo(() => ({ boardId, role }), [boardId, role]);
+  const boardInfo = useMemo(() => ({ boardId, role, people }), [boardId, role, people]);
 
   const closePanels = () => {
     setConfigId(null);
     setDrawerOpen(false);
     setScreenOpen(false);
+    setPeopleOpen(false);
+  };
+
+  /** La couleur d'une personne est enregistrée tout de suite : elle ne fait pas partie du brouillon. */
+  const changeColor = async (userId: string, color: string) => {
+    const before = people;
+    setPeople(people.map((p) => (p.userId === userId ? { ...p, color } : p)));
+    setPeopleError(null);
+    try {
+      await setPersonColor(boardId, userId, color);
+    } catch {
+      setPeople(before);
+      setPeopleError("Enregistrement impossible. Réessayez.");
+    }
   };
 
   const startEdit = () => {
@@ -276,6 +295,9 @@ export default function Board({
                 <>
                   <button className="btn" onClick={() => { closePanels(); setDrawerOpen(true); }}>
                     <Icon name="plus" /> Ajouter un widget
+                  </button>
+                  <button className="btn" onClick={() => { closePanels(); setPeopleOpen(true); }}>
+                    <Icon name="users" /> Personnes
                   </button>
                   <button className="btn" onClick={() => { closePanels(); setScreenOpen(true); }}>
                     <Icon name="sliders" /> Écran
@@ -460,6 +482,41 @@ export default function Board({
             onCancel={() => setToRemove(null)}
             onConfirm={() => removeWidget(toRemove.widget.id)}
           />
+        )}
+
+        {editing && peopleOpen && (
+          <Modal
+            title="Personnes"
+            subtitle="Les comptes qui ont accès à ce board. Leur couleur sert à les repérer dans les widgets."
+            onClose={() => setPeopleOpen(false)}
+          >
+            {people.map((person) => (
+              <div key={person.userId} className="person">
+                <div className="person-head">
+                  <span className="badge" style={{ background: person.color }}>{person.name.charAt(0).toUpperCase()}</span>
+                  <span className="person-name">{person.name}</span>
+                  <span className="dim small">{person.role === "admin" ? "Administrateur" : "Membre"}</span>
+                </div>
+                <div className="swatches" role="radiogroup" aria-label={`Couleur de ${person.name}`}>
+                  {PERSON_COLORS.map((color) => (
+                    <button
+                      key={color}
+                      role="radio"
+                      aria-checked={person.color === color}
+                      aria-label={color}
+                      className={"swatch" + (person.color === color ? " on" : "")}
+                      style={{ background: color }}
+                      onClick={() => changeColor(person.userId, color)}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+            {peopleError && <div className="save-error" role="alert">{peopleError}</div>}
+            <div className="muted small">
+              Pour l’instant, on ajoute une personne au board en ligne de commande (voir le README).
+            </div>
+          </Modal>
         )}
 
         {editing && screenOpen && (

@@ -8,6 +8,13 @@
       "when": 1794564341002,
       "tag": "0000_new_wiccan",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794576246536,
+      "tag": "0001_public_speedball",
+      "breakpoints": true
     }
   ]
 }

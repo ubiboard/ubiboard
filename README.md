@@ -26,6 +26,8 @@ une tablette ou un téléphone.
 - **Enregistrement en base** : la disposition du board et les données des widgets sont stockées dans PostgreSQL
   et partagées entre les appareils.
 - **Rôles** : un administrateur du board modifie la disposition ; un membre utilise les widgets.
+- **Personnes** : plusieurs comptes peuvent partager un board, chacun avec sa couleur (ajout en ligne de commande
+  pour l'instant).
 
 ## Démarrer
 
@@ -57,7 +59,8 @@ Il faut Node.js 20.6 ou plus récent et une base PostgreSQL (par exemple [Neon](
    npm run dev
    ```
 
-À la première connexion, un board « Maison » est créé pour le compte.
+À la première connexion, un board « Maison » est créé pour le compte. Un compte ajouté à un autre board voit
+celui qu'il a rejoint en dernier.
 
 ### Commandes utiles
 
@@ -66,6 +69,9 @@ Il faut Node.js 20.6 ou plus récent et une base PostgreSQL (par exemple [Neon](
 | `npm run user:create -- <email> "<nom>"` | Créer un compte |
 | `npm run user:password -- <email>` | Changer un mot de passe |
 | `npm run user:list` | Lister les comptes |
+| `npm run board:list` | Lister les boards et leurs personnes |
+| `npm run board:add -- <email> <email d'un admin du board> [membre\|admin]` | Ajouter un compte existant à un board, ou changer son rôle |
+| `npm run board:remove -- <email> <email d'un admin du board>` | Retirer quelqu'un d'un board |
 | `npm run db:generate` | Générer une migration après une modification de `lib/db/schema.ts` |
 | `npm run db:migrate` | Appliquer les migrations |
 
@@ -81,6 +87,7 @@ Il faut Node.js 20.6 ou plus récent et une base PostgreSQL (par exemple [Neon](
 | `lib/db/schema.ts` | Schéma de la base (comptes, boards, vues, widgets, données) |
 | `lib/boards.ts`, `app/actions.ts` | Lecture et enregistrement côté serveur, contrôle des droits |
 | `lib/auth.ts`, `scripts/user.ts` | Connexion (Better Auth) et gestion des comptes en ligne de commande |
+| `scripts/board.ts` | Ajout et retrait de personnes sur un board en ligne de commande |
 | `lib/demo-data.ts` | Données factices |
 
 ## Ajouter un widget
@@ -108,6 +115,8 @@ registerWidget({
 Un widget qui enregistre des données déclare `storesData: true` et utilise `useWidgetData(dataId)` : il obtient
 sa liste d'éléments (un objet JSON par élément, de la forme qu'il veut) et les fonctions `add`, `update` et
 `remove`. Aucune table ni migration à ajouter. Voir `ShoppingWidget.tsx`.
+
+Les personnes du board (nom, couleur, rôle) sont disponibles dans tout widget avec `useBoard().people`.
 
 Il suffit ensuite de l'importer dans `components/widgets/index.ts` : il apparaît dans le tiroir d'ajout et
 dans la boutique, avec sa modale de réglages.
