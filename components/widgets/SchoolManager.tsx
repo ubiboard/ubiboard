@@ -23,6 +23,9 @@ export default function SchoolManager({ dataId, saved }: ManagerProps) {
   const [editing, setEditing] = useState<"new" | DataItem<Slot> | null>(null);
   const [form, setForm] = useState<Form>({ name: "", start: "08:30", end: "09:30", color: null });
   const [toDelete, setToDelete] = useState<DataItem<Slot> | null>(null);
+  // Jours cochés dans le panneau « Copier vers » ; null = panneau fermé.
+  const [copyTo, setCopyTo] = useState<number[] | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
 
   if (!saved) {
     return (
@@ -108,6 +111,27 @@ export default function SchoolManager({ dataId, saved }: ManagerProps) {
     );
   }
 
+  /* ---------- Copie vers d'autres jours ---------- */
+
+  const sameSlot = (a: Slot, b: Slot) => a.start === b.start && a.end === b.end && a.name === b.name;
+
+  /** Ajoute les créneaux du jour affiché aux jours cochés, sans toucher à ceux qui y sont déjà. */
+  const copyDay = () => {
+    if (!copyTo) return;
+    let added = 0;
+    for (const target of copyTo) {
+      const existing = items.filter((it) => it.content.day === target).map((it) => it.content);
+      for (const { content } of ofDay) {
+        if (existing.some((slot) => sameSlot(slot, content))) continue; // déjà présent
+        add({ ...content, day: target });
+        added += 1;
+      }
+    }
+    const names = copyTo.map((d) => WEEKDAY_NAMES[d]).join(", ");
+    setCopied(added === 0 ? `Rien à copier : ces créneaux existent déjà (${names}).` : `${added} créneau${added > 1 ? "x" : ""} copié${added > 1 ? "s" : ""} vers : ${names}.`);
+    setCopyTo(null);
+  };
+
   /* ---------- Liste par jour ---------- */
 
   const openNew = () => {
@@ -126,7 +150,17 @@ export default function SchoolManager({ dataId, saved }: ManagerProps) {
         {WEEKDAYS_FROM_MONDAY.map((d) => {
           const count = items.filter((it) => it.content.day === d).length;
           return (
-            <button key={d} role="tab" aria-selected={day === d} className={"chip" + (day === d ? " on" : "")} onClick={() => setDay(d)}>
+            <button
+              key={d}
+              role="tab"
+              aria-selected={day === d}
+              className={"chip" + (day === d ? " on" : "")}
+              onClick={() => {
+                setDay(d);
+                setCopyTo(null);
+                setCopied(null);
+              }}
+            >
               {capitalize(WEEKDAY_NAMES[d]).slice(0, 3)}
               {count > 0 && <span className="chip-count">{count}</span>}
             </button>
@@ -163,6 +197,36 @@ export default function SchoolManager({ dataId, saved }: ManagerProps) {
       <button className="btn btn-primary center" onClick={openNew}>
         <Icon name="plus" /> Ajouter un créneau le {WEEKDAY_NAMES[day]}
       </button>
+      {ofDay.length > 0 && copyTo === null && (
+        <button className="btn center" onClick={() => { setCopyTo([]); setCopied(null); }}>
+          <Icon name="copy" size={18} /> Copier les créneaux du {WEEKDAY_NAMES[day]} vers d’autres jours
+        </button>
+      )}
+      {copyTo !== null && (
+        <div className="info-box">
+          <span className="strong">Copier les {ofDay.length} créneau{ofDay.length > 1 ? "x" : ""} du {WEEKDAY_NAMES[day]} vers</span>
+          <div className="chips">
+            {WEEKDAYS_FROM_MONDAY.filter((d) => d !== day).map((d) => (
+              <button
+                key={d}
+                className={"chip" + (copyTo.includes(d) ? " on" : "")}
+                aria-pressed={copyTo.includes(d)}
+                onClick={() =>
+                  setCopyTo((prev) => (!prev ? prev : prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]))
+                }
+              >
+                {capitalize(WEEKDAY_NAMES[d])}
+              </button>
+            ))}
+          </div>
+          <span className="muted small">Les créneaux déjà présents ces jours-là sont conservés.</span>
+          <div className="modal-actions">
+            <button className="btn" onClick={() => setCopyTo(null)}>Annuler</button>
+            <button className="btn btn-primary" disabled={copyTo.length === 0} onClick={copyDay}>Copier</button>
+          </div>
+        </div>
+      )}
+      {copied && <div className="task-phrase" role="status">{copied}</div>}
       <div className="dim small">Un créneau ajouté, modifié ou supprimé ici est enregistré tout de suite.</div>
 
       {toDelete && (

@@ -3,6 +3,7 @@ import {
   Calendar,
   Check,
   Cloud,
+  Copy,
   CloudRain,
   House,
   LogOut,
@@ -42,6 +43,7 @@ const ICONS = {
   rain: CloudRain,
   logout: LogOut,
   users: Users,
+  copy: Copy,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICONS;

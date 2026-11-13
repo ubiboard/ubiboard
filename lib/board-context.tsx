@@ -85,7 +85,7 @@ export function useWidgetData<T extends Record<string, unknown>>(dataId: string)
 
   const add = useCallback(
     (content: T) => {
-      const tempId = `tmp-${Date.now()}`;
+      const tempId = `tmp-${crypto.randomUUID()}`;
       setItems((prev) => [...prev, { id: tempId, content }]);
       return write(async () => {
         const created = (await addItem(boardId, dataId, content)) as DataItem<T>;

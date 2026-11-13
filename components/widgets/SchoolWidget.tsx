@@ -68,7 +68,7 @@ function School({ bodyHeight, options, dataId }: WidgetProps) {
                     style={{ top, height, background: slot.color ?? DEFAULT_SLOT_COLOR }}
                     title={`${slot.start} – ${slot.end} · ${slot.name}`}
                   >
-                    <span className="slot-time">{slot.start}</span>
+                    <span className="slot-time">{slot.start}–{slot.end}</span>
                     <span className="slot-name">{slot.name}</span>
                   </div>
                 );

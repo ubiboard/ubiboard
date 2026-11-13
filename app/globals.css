@@ -458,6 +458,7 @@ button {
 .task-phrase { margin-top: 12px; color: var(--accent); font-size: 15px; }
 .person-chip { display: inline-flex; align-items: center; gap: 8px; padding-left: 9px; }
 .chip { display: inline-flex; align-items: center; gap: 8px; }
+.info-box .chips { margin: 6px 0; }
 .info-box {
   border: 1px solid var(--border);
   border-radius: 18px;
@@ -624,13 +625,20 @@ button {
 .school { flex: 1; min-height: 0; display: grid; gap: 12px; overflow: hidden; align-content: start; }
 .school-day { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .school-track { position: relative; }
+/* Colonnes étroites (vue semaine dans un petit widget) : texte resserré pour garder les deux heures sur une ligne. */
+.school-day { container-type: inline-size; }
+@container (max-width: 100px) {
+  .slot { padding: 4px 5px; }
+  .slot .slot-time { font-size: 10.5px; letter-spacing: -0.02em; }
+  .slot .slot-name { font-size: 13px; }
+}
 .slot {
   position: absolute;
   left: 0;
   right: 0;
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 12px;
-  padding: 6px 10px;
+  padding: 6px 8px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -643,9 +651,9 @@ button {
 .slot.compact .slot-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .slot.current { border-color: var(--accent); }
 .slot.past { opacity: 0.5; }
-.slot-time { flex: none; font-size: 13px; font-weight: 600; color: var(--muted); }
+.slot-time { flex: none; font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; }
 .slot.current .slot-time { color: var(--accent); }
-.slot-name { font-size: 15px; line-height: 1.2; min-width: 0; }
+.slot-name { font-size: 15px; line-height: 1.2; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
 .note {
   flex: 1;
