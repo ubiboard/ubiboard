@@ -29,6 +29,13 @@
       "when": 1794583909100,
       "tag": "0003_grille_12_colonnes",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794601051196,
+      "tag": "0004_fusion_horloge_meteo",
+      "breakpoints": true
     }
   ]
 }

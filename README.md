@@ -15,7 +15,7 @@ une tablette ou un téléphone.
   - *édition* (bouton crayon) : placement libre des widgets par glisser-déposer, redimensionnement par le
     coin inférieur droit, ajout, suppression et configuration. Rien n'est enregistré tant qu'on n'a pas
     cliqué **Enregistrer** ; **Annuler** jette le brouillon.
-- **Sept widgets par défaut** : Horloge, Météo, Calendrier, Tâches, Courses, Emploi du temps, Mot de la famille.
+- **Six widgets par défaut** : Horloge et météo, Calendrier, Tâches, Courses, Emploi du temps, Mot de la famille.
   Chacun adapte son affichage à sa taille.
 - **Tâches** : ponctuelles ou récurrentes (chaque N jours, semaines, mois ou années), affectées à une ou plusieurs
   personnes avec roulement automatique. Le widget montre qui doit faire quoi aujourd'hui.
@@ -138,8 +138,11 @@ Un widget dont les données se gèrent dans une grande fenêtre (créer, modifie
 `TasksManager.tsx`. Les règles côté serveur d'un type de widget se déclarent dans `lib/data-policy.ts` : écriture
 réservée aux administrateurs, champs secrets jamais renvoyés au navigateur, validation avant enregistrement.
 
-Un réglage que tout membre peut changer depuis le widget (un type de vue, par exemple) passe par `setOption` et
-doit être déclaré dans `USAGE_OPTIONS` (`app/actions.ts`).
+Un widget peut placer des boutons en haut à droite, sur la ligne de son titre (navigation, par exemple) : il
+déclare `headerActions: true` et les enveloppe dans `<HeaderActions>`.
+
+Un réglage que tout membre peut changer depuis le widget passe par `setOption` et doit être déclaré dans
+`USAGE_OPTIONS` (`app/actions.ts`).
 
 Il suffit ensuite de l'importer dans `components/widgets/index.ts` : il apparaît dans le tiroir d'ajout et
 dans la boutique, avec sa modale de réglages.

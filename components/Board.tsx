@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import GridLayout, { useContainerWidth, type EventCallback, type Layout, type LayoutItem } from "react-grid-layout";
 import { countItems, getBoardView, saveBoardView, setPersonColor, setWidgetOption } from "@/app/actions";
 import { authClient } from "@/lib/auth-client";
-import { BoardProvider, useBoard } from "@/lib/board-context";
+import { BoardProvider, WidgetActionsContext, useBoard } from "@/lib/board-context";
 import { GRID_COLS, PERSON_COLORS, type BoardRole, type BoardState, type Person, type PlacedWidget } from "@/lib/board-types";
 import { createPushCompactor, type MoveSession } from "@/lib/placement";
 import { getWidget, listWidgets } from "@/lib/widgets";
@@ -17,8 +17,8 @@ import "@/components/widgets"; // enregistre les widgets par défaut
 
 const COLS = GRID_COLS;
 const ROWS = 5; // lignes visibles sans défilement sur l'écran mural
-const GAP = 16;
-const HEADER = 72;
+const GAP = 10;
+const HEADER = 36; // bandeau réduit
 const PHONE_QUERY = "(max-width: 760px)";
 
 function useRowHeight(): number {
@@ -65,13 +65,24 @@ function WidgetFrame({
   height: number;
 }) {
   const { people, setWidgetOption: setOptionOf } = useBoard();
+  // L'emplacement des boutons d'en-tête, rempli par le widget via <HeaderActions>.
+  const [actionsSlot, setActionsSlot] = useState<HTMLDivElement | null>(null);
   const def = getWidget(widget.type);
   if (!def) return null;
   const title = widgetTitle(widget, people);
-  const bodyHeight = height - 38 - (widget.showTitle ? 26 : 0);
+  // L'en-tête existe s'il y a un titre ou des boutons ; il est plus haut avec des boutons.
+  const hasHead = widget.showTitle || !!def.headerActions;
+  const headHeight = !hasHead ? 0 : def.headerActions ? 36 : 22;
+  const bodyHeight = height - 22 - headHeight;
   return (
     <section className="widget" aria-label={title}>
-      {widget.showTitle && <h2 className="widget-title">{title}</h2>}
+      {hasHead && (
+        <div className={"widget-head" + (def.headerActions ? " with-actions" : "")}>
+          {widget.showTitle ? <h2 className="widget-title">{title}</h2> : <span />}
+          <div className="widget-actions" ref={setActionsSlot} />
+        </div>
+      )}
+      <WidgetActionsContext.Provider value={actionsSlot}>
       <div className="widget-body">
         <def.Component
           w={w}
@@ -82,6 +93,7 @@ function WidgetFrame({
           setOption={(key, value) => setOptionOf(widget.id, key, value)}
         />
       </div>
+      </WidgetActionsContext.Provider>
     </section>
   );
 }
@@ -333,7 +345,7 @@ export default function Board({
         {!isPhone && (
           <header className="topbar">
             <div className="topbar-left">
-              <Icon name="home" size={26} color="var(--accent)" />
+              <Icon name="home" size={18} color="var(--accent)" />
               <h1 className="brand">{boardName}</h1>
               {editing && <span className="tag">Mode édition</span>}
               {saveError && <span className="save-error" role="alert">{saveError}</span>}
@@ -697,7 +709,7 @@ function PhoneView({
     content = (
       <div className="phone-full">
         {placed ? (
-          <WidgetFrame widget={{ ...placed, showTitle: true }} w={3} h={5} height={46 * 12 + 64} />
+          <WidgetFrame widget={{ ...placed, showTitle: true }} w={3} h={5} height={40 * 12 + 60} />
         ) : (
           <div className="empty static">Ce board n’a pas de widget « {active.label} ».</div>
         )}
@@ -715,7 +727,7 @@ function PhoneView({
                 widget={{ ...widget, showTitle: widget.type !== "clock" }}
                 w={3}
                 h={small ? 2 : 3}
-                height={small ? 150 : 46 * 5 + 64}
+                height={small ? 150 : 40 * 6 + 60}
               />
             </div>
           );

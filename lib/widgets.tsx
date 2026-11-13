@@ -65,6 +65,11 @@ export type WidgetDefinition = {
   };
   options: WidgetOption[];
   defaultOptions: WidgetOptions;
+  /**
+   * Le widget place des boutons dans son en-tête (navigation…), via
+   * <HeaderActions>. L'en-tête est alors affiché même sans titre.
+   */
+  headerActions?: boolean;
   /** Le titre est-il affiché par défaut à l'ajout ? */
   defaultShowTitle: boolean;
   /** Titre affiché en haut du widget (peut dépendre des réglages). */
@@ -92,7 +97,7 @@ export function listWidgets(): WidgetDefinition[] {
   return Object.values(REGISTRY);
 }
 
-/** Nombre de lignes de liste (46 px) qui tiennent dans la hauteur utile. */
-export function rowsFit(bodyHeight: number, reserved = 0, rowHeight = 46): number {
+/** Nombre de lignes de liste (40 px) qui tiennent dans la hauteur utile. */
+export function rowsFit(bodyHeight: number, reserved = 0, rowHeight = 40): number {
   return Math.max(1, Math.floor((bodyHeight - reserved) / rowHeight));
 }

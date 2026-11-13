@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { addItem, deleteItem, listItems, updateItem } from "@/app/actions";
 import type { BoardRole, DataItem, Person } from "@/lib/board-types";
 
@@ -21,6 +22,19 @@ export function useBoard(): BoardInfo {
   const ctx = useContext(BoardContext);
   if (!ctx) throw new Error("useBoard doit être utilisé dans un board.");
   return ctx;
+}
+
+/** L'emplacement, à droite du titre, où un widget peut placer ses boutons. */
+export const WidgetActionsContext = createContext<HTMLElement | null>(null);
+
+/**
+ * Place des boutons en haut à droite du widget, sur la ligne du titre
+ * (navigation, retour à aujourd'hui…). Le widget doit déclarer
+ * `headerActions: true` dans sa définition.
+ */
+export function HeaderActions({ children }: { children: ReactNode }) {
+  const slot = useContext(WidgetActionsContext);
+  return slot ? createPortal(children, slot) : null;
 }
 
 const REFRESH_MS = 20_000;

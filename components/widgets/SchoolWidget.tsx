@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { registerWidget, type WidgetProps } from "@/lib/widgets";
-import { useWidgetData } from "@/lib/board-context";
+import { HeaderActions, useWidgetData } from "@/lib/board-context";
 import { useNow } from "@/lib/hooks";
 import { DAYS_SHORT } from "@/lib/demo-data";
 import { addDays, isOnDay, startOfDay } from "@/lib/calendar";
@@ -19,8 +19,7 @@ import {
 import Icon from "@/components/Icon";
 import SchoolManager from "./SchoolManager";
 
-const BAR_HEIGHT = 44; // barre de navigation + marge
-const HEAD_HEIGHT = 36; // en-tête de jour + marge
+const HEAD_HEIGHT = 32; // en-tête de jour + marge
 const BACK_TO_TODAY_MS = 2 * 60_000;
 
 type View = "2j" | "week";
@@ -30,7 +29,7 @@ type Block = { key: string; start: string; end: string; name: string; color: str
 
 const hhmm = (date: Date) => `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 
-function School({ bodyHeight, options, dataId, setOption }: WidgetProps) {
+function School({ bodyHeight, options, dataId }: WidgetProps) {
   const { items, loading, error } = useWidgetData<SchoolItem>(dataId);
   const now = useNow(60_000);
   const today = startOfDay(now);
@@ -40,12 +39,14 @@ function School({ bodyHeight, options, dataId, setOption }: WidgetProps) {
   const manual = items.filter((it) => !isIcalLink(it.content)).map((it) => ({ id: it.id, slot: it.content as Slot }));
   const link = items.find((it) => isIcalLink(it.content));
 
-  // Le type de vue est un réglage du widget, commun à tous les appareils du board.
+  // Le type de vue se règle dans la configuration du widget.
   const view: View = options.span === "week" ? "week" : "2j";
-  const setView = (next: View) => setOption("span", next);
   // Décalage par rapport à aujourd'hui : en jours (vue jours) ou en semaines (vue semaine).
   const [shift, setShift] = useState(0);
   const week = view === "week";
+
+  // Quand le type de vue change, on revient à aujourd'hui.
+  useEffect(() => setShift(0), [view]);
 
   // Un écran mural ne doit pas rester sur une autre semaine : retour à aujourd'hui après un moment.
   useEffect(() => {
@@ -89,27 +90,24 @@ function School({ bodyHeight, options, dataId, setOption }: WidgetProps) {
   const days = week && !weekendBusy ? allDays.slice(0, 5) : allDays;
 
   // Un seul axe pour tous les jours affichés : les cours à la même heure sont alignés.
-  const axis = buildAxis(days.flatMap((d) => d.blocks), bodyHeight - BAR_HEIGHT - HEAD_HEIGHT);
+  const axis = buildAxis(days.flatMap((d) => d.blocks), bodyHeight - HEAD_HEIGHT);
   const empty = manual.length === 0 && !link;
   const problem = error ?? (failed ? "Emploi du temps indisponible pour le moment." : errors[0]?.message);
 
   return (
     <>
-      <div className="school-bar">
+      {/* Navigation en haut à droite du widget, sur la ligne du titre. */}
+      <HeaderActions>
+        {shift !== 0 && (
+          <button className="bar-chip" onClick={() => setShift(0)}>Auj.</button>
+        )}
         <button className="bar-btn" aria-label={week ? "Semaine précédente" : "Jour précédent"} title="Précédent" onClick={() => setShift(shift - 1)}>
-          <Icon name="previous" size={18} />
+          <Icon name="previous" size={16} />
         </button>
         <button className="bar-btn" aria-label={week ? "Semaine suivante" : "Jour suivant"} title="Suivant" onClick={() => setShift(shift + 1)}>
-          <Icon name="next" size={18} />
+          <Icon name="next" size={16} />
         </button>
-        {shift !== 0 && (
-          <button className="bar-chip" onClick={() => setShift(0)}>Aujourd’hui</button>
-        )}
-        <div className="segmented" role="group" aria-label="Type de vue">
-          <button aria-pressed={!week} className={!week ? "on" : ""} onClick={() => { setView("2j"); setShift(0); }}>Jours</button>
-          <button aria-pressed={week} className={week ? "on" : ""} onClick={() => { setView("week"); setShift(0); }}>Semaine</button>
-        </div>
-      </div>
+      </HeaderActions>
 
       {(loading || (eventsLoading && manual.length === 0)) && <div className="dim small">Chargement…</div>}
       {problem && <div className="widget-error" style={{ margin: "0 0 6px" }}>{problem}</div>}
@@ -176,6 +174,7 @@ registerWidget({
   ],
   defaultOptions: { who: "all", span: "2j" },
   defaultShowTitle: true,
+  headerActions: true,
   // Le nom de la personne choisie complète le titre.
   title: (options, people) => {
     const person = people.find((p) => p.userId === options.who);

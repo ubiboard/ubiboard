@@ -18,7 +18,7 @@ function Shopping({ bodyHeight, options, dataId }: WidgetProps) {
 
   const visible = items
     .filter((it) => options.done === "show" || !it.content.done)
-    .slice(0, rowsFit(bodyHeight, 52, 44));
+    .slice(0, rowsFit(bodyHeight, 50, 40));
 
   const submit = (e: FormEvent) => {
     e.preventDefault();

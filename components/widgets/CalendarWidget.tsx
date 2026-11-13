@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { registerWidget, rowsFit, type WidgetProps } from "@/lib/widgets";
-import { useWidgetData } from "@/lib/board-context";
+import { HeaderActions, useWidgetData } from "@/lib/board-context";
 import { useCalendarEvents } from "@/lib/use-calendar-events";
 import { useNow } from "@/lib/hooks";
 import { DAYS, DAYS_SHORT, MONTHS } from "@/lib/demo-data";
@@ -22,13 +22,12 @@ import {
 import Icon from "@/components/Icon";
 import CalendarManager from "./CalendarManager";
 
-const BAR_HEIGHT = 44;
 const BACK_TO_TODAY_MS = 2 * 60_000;
 const LIST_DAYS = 45; // la vue liste regarde un mois et demi devant elle
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-function Calendar({ w, bodyHeight, options, dataId, setOption }: WidgetProps) {
+function Calendar({ w, bodyHeight, options, dataId }: WidgetProps) {
   const { items: sources, loading: sourcesLoading } = useWidgetData<CalendarSource>(dataId);
   const now = useNow(60_000);
   const today = startOfDay(now);
@@ -36,6 +35,9 @@ function Calendar({ w, bodyHeight, options, dataId, setOption }: WidgetProps) {
   const view: CalendarView = CALENDAR_VIEWS.some((v) => v.value === options.view) ? (options.view as CalendarView) : "week";
   // Décalage par rapport à aujourd'hui, dans l'unité de la vue (mois, semaines, jours).
   const [shift, setShift] = useState(0);
+
+  // Le type de vue se règle dans la configuration du widget ; quand il change, on revient à aujourd'hui.
+  useEffect(() => setShift(0), [view]);
 
   // Un écran mural ne doit pas rester sur une autre période : retour à aujourd'hui après un moment.
   useEffect(() => {
@@ -74,36 +76,22 @@ function Calendar({ w, bodyHeight, options, dataId, setOption }: WidgetProps) {
   const { events, errors, loading, failed } = useCalendarEvents(dataId, from, to, sourcesKey, sources.length > 0);
   const colorOf = (event: CalendarEvent) => sources.find((s) => s.id === event.sourceId)?.content.color ?? "#C9C9D1";
   const days = Array.from({ length: dayCount }, (_, i) => addDays(from, i));
-  const available = bodyHeight - BAR_HEIGHT;
+  const available = bodyHeight;
 
+  // Navigation en haut à droite du widget, sur la ligne du titre.
   const bar = (
-    <div className="school-bar">
-      <button className="bar-btn" aria-label="Période précédente" title="Précédent" onClick={() => setShift(shift - 1)}>
-        <Icon name="previous" size={18} />
-      </button>
-      <button className="bar-btn" aria-label="Période suivante" title="Suivant" onClick={() => setShift(shift + 1)}>
-        <Icon name="next" size={18} />
-      </button>
+    <HeaderActions>
+      {w >= 5 && <span className="bar-label ellipsis">{label}</span>}
       {shift !== 0 && (
         <button className="bar-chip" onClick={() => setShift(0)}>{w >= 6 ? "Aujourd’hui" : "Auj."}</button>
       )}
-      {w >= 5 && <span className="bar-label ellipsis">{label}</span>}
-      <div className="segmented" role="group" aria-label="Type de vue">
-        {CALENDAR_VIEWS.map((v) => (
-          <button
-            key={v.value}
-            aria-pressed={view === v.value}
-            className={view === v.value ? "on" : ""}
-            onClick={() => {
-              setOption("view", v.value);
-              setShift(0);
-            }}
-          >
-            {w >= 6 ? v.label : v.label.charAt(0)}
-          </button>
-        ))}
-      </div>
-    </div>
+      <button className="bar-btn" aria-label="Période précédente" title="Précédent" onClick={() => setShift(shift - 1)}>
+        <Icon name="previous" size={16} />
+      </button>
+      <button className="bar-btn" aria-label="Période suivante" title="Suivant" onClick={() => setShift(shift + 1)}>
+        <Icon name="next" size={16} />
+      </button>
+    </HeaderActions>
   );
 
   let content;
@@ -231,6 +219,7 @@ registerWidget({
   options: [{ key: "view", label: "Vue", choices: CALENDAR_VIEWS }],
   defaultOptions: { view: "week" },
   defaultShowTitle: true,
+  headerActions: true,
   title: () => "Calendrier",
   Component: Calendar,
   Manager: CalendarManager,

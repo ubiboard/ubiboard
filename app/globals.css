@@ -185,15 +185,23 @@ button {
   flex-direction: column;
 }
 
+/* Bandeau réduit : une fine ligne en lecture, qui s'agrandit en mode édition. */
 .topbar {
-  height: 72px;
+  min-height: 36px;
   flex: none;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 0 32px;
+  gap: 6px 12px;
+  padding: 0 10px 0 14px;
 }
+.topbar .btn-icon { width: 28px; height: 28px; border-radius: 14px; background: transparent; border-color: transparent; }
+.topbar .btn-icon:hover { background: #1f1f24; }
+.topbar .btn-icon svg { width: 16px; height: 16px; }
+.topbar .btn { height: 36px; padding: 0 14px; font-size: 14px; }
+.topbar .btn-primary { padding: 0 18px; }
+.topbar:has(.btn) { padding-top: 6px; padding-bottom: 6px; }
 .topbar-left,
 .topbar-right {
   display: flex;
@@ -203,14 +211,16 @@ button {
 .brand {
   margin: 0;
   font-family: var(--font-head);
-  font-size: 20px;
+  font-size: 15px;
   font-weight: 500;
   letter-spacing: -0.01em;
+  color: var(--muted);
 }
+.topbar .tag { padding: 2px 8px; font-size: 11px; }
 
 .board-area {
   flex: 1;
-  margin: 0 32px 16px;
+  margin: 0 10px 10px;
   position: relative;
 }
 .board.phone .board-area { margin: 0; }
@@ -236,7 +246,7 @@ button {
   color: var(--dim);
   font-size: 18px;
   border: 1px dashed var(--border-3);
-  border-radius: 24px;
+  border-radius: 16px;
 }
 
 /* ---------- Cadre de widget ---------- */
@@ -251,14 +261,19 @@ button {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  padding: 18px 20px;
+  padding: 10px 12px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 24px;
+  border-radius: 16px;
 }
+/* En-tête : le titre à gauche, les boutons du widget à droite. */
+.widget-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 16px; margin-bottom: 6px; }
+.widget-head.with-actions { height: 28px; margin-bottom: 8px; }
+.widget-actions { flex: none; display: flex; align-items: center; gap: 4px; min-width: 0; }
 .widget-title {
-  margin: 0 0 10px;
-  flex: none;
+  margin: 0;
+  min-width: 0;
+  flex: 1;
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.1em;
@@ -284,7 +299,7 @@ button {
   position: absolute;
   inset: 0;
   z-index: 2;
-  border-radius: 24px;
+  border-radius: 16px;
   background: rgba(0, 0, 0, 0.45);
   cursor: grab;
   touch-action: none;
@@ -347,13 +362,13 @@ button {
 }
 .grid-guide-cell {
   border: 1px dashed var(--border-3);
-  border-radius: 24px;
+  border-radius: 16px;
 }
 
 .react-grid-item.react-grid-placeholder {
   background: var(--accent);
   opacity: 0.15;
-  border-radius: 24px;
+  border-radius: 16px;
 }
 
 /* ---------- Modale ---------- */
@@ -512,7 +527,14 @@ button {
 
 /* ---------- Contenu des widgets ---------- */
 
-.clock { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
+/* Horloge et météo : côte à côte sur une ligne, empilées quand le widget est haut ou étroit. */
+.cw { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cw.stacked { flex-direction: column; align-items: stretch; justify-content: center; gap: 10px; }
+.cw-weather { flex: none; display: flex; align-items: center; gap: 10px; min-width: 0; }
+.cw-weather.narrow { gap: 6px; }
+.cw-weather-text { min-width: 0; display: flex; flex-direction: column; font-size: 14px; line-height: 1.3; }
+.cw .forecast-row { padding-top: 8px; gap: 6px; }
+.clock { min-width: 0; display: flex; flex-direction: column; justify-content: center; }
 .clock-time {
   font-family: var(--font-head);
   font-weight: 300;
@@ -521,7 +543,7 @@ button {
   white-space: nowrap;
 }
 .clock-secs { font-size: 0.4em; color: var(--dim); letter-spacing: 0; }
-.clock-date { margin-top: 8px; color: var(--muted); }
+.clock-date { margin-top: 6px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .weather { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 8px; font-size: 15px; }
 .weather-now { display: flex; align-items: center; gap: 14px; }
@@ -586,7 +608,7 @@ button {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 46px;
+  min-height: 40px;
   border-bottom: 1px solid var(--surface-2);
   font-size: 15px;
 }
@@ -622,7 +644,10 @@ button {
   font-size: 16px;
 }
 .row-btn:hover { background: var(--surface-2); }
-.shop-row { display: flex; align-items: center; gap: 2px; min-height: 44px; }
+.shop-row { display: flex; align-items: center; gap: 2px; min-height: 40px; }
+.shop-row .row-btn { min-height: 40px; }
+.shop-form .input, .shop-form .btn-icon { height: 40px; }
+.shop-form .btn-icon { width: 40px; }
 .shop-row .row-btn { flex: 1; min-width: 0; width: auto; }
 .shop-edit { height: 40px; }
 .row-action {
@@ -652,12 +677,11 @@ button {
 .check.on { border-color: var(--accent); background: var(--accent); }
 
 /* Barre de navigation d'un widget : flèches, retour à aujourd'hui, type de vue. */
-.school-bar { flex: none; display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
 .bar-btn {
   flex: none;
-  width: 36px;
-  height: 36px;
-  border-radius: 18px;
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
   background: #141417;
   border: 1px solid var(--border-2);
   display: inline-flex;
@@ -667,16 +691,16 @@ button {
 }
 .bar-btn:hover { background: #1f1f24; }
 .bar-chip {
-  height: 36px;
-  padding: 0 14px;
-  border-radius: 18px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 14px;
   border: 1px solid var(--accent-border);
   background: transparent;
   color: var(--accent);
   font-size: 14px;
   font-weight: 500;
 }
-.bar-label { min-width: 0; margin-left: 6px; font-size: 15px; font-weight: 500; }
+.bar-label { min-width: 0; margin-right: 4px; font-size: 14px; font-weight: 500; color: var(--muted); }
 .segmented { margin-left: auto; flex: none; display: inline-flex; border: 1px solid var(--border-3); border-radius: 18px; overflow: hidden; }
 .segmented button { height: 34px; padding: 0 14px; border: 0; background: transparent; font-size: 14px; font-weight: 500; color: var(--muted); }
 .segmented button.on { background: var(--accent); color: var(--accent-ink); }
@@ -750,6 +774,7 @@ label.field-label { display: block; }
 
 .phone-head { padding: 20px 20px 12px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .phone-title { margin: 2px 0 0; font-family: var(--font-head); font-size: 28px; font-weight: 500; }
+.phone .widget { padding: 12px 14px; }
 .phone-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

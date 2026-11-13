@@ -8,8 +8,7 @@ const { board, boardMember, view, widget, user } = schema;
 
 /** Vue de départ d'un nouveau board. */
 const STARTER_WIDGETS: { type: string; x: number; y: number; w: number; h: number; showTitle: boolean; options: Record<string, string> }[] = [
-  { type: "clock", x: 0, y: 0, w: 3, h: 1, showTitle: false, options: { secs: "off" } },
-  { type: "weather", x: 0, y: 1, w: 3, h: 1, showTitle: true, options: { unit: "C" } },
+  { type: "clock", x: 0, y: 0, w: 3, h: 2, showTitle: false, options: { secs: "off", weather: "on", unit: "C" } },
   { type: "calendar", x: 3, y: 0, w: 9, h: 2, showTitle: true, options: { view: "week" } },
   { type: "chores", x: 0, y: 2, w: 3, h: 3, showTitle: true, options: { who: "all" } },
   { type: "school", x: 3, y: 2, w: 6, h: 3, showTitle: true, options: { who: "all", span: "2j" } },
