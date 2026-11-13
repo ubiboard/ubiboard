@@ -58,7 +58,7 @@ registerWidget({
   source: "default",
   access: "note du foyer (lecture, écriture)",
   storesData: true,
-  sizes: { min: [2, 1], default: [2, 2], max: [4, 3] },
+  sizes: { min: [3, 1], default: [3, 2], max: [6, 3] },
   options: [],
   defaultOptions: {},
   defaultShowTitle: true,

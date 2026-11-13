@@ -117,7 +117,7 @@ registerWidget({
   source: "default",
   access: "liste de courses (lecture, écriture)",
   storesData: true,
-  sizes: { min: [2, 2], default: [2, 3], max: [4, 5] },
+  sizes: { min: [3, 2], default: [3, 3], max: [6, 5] },
   options: [
     {
       key: "done",

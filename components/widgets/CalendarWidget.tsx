@@ -119,9 +119,9 @@ function Calendar({ w, bodyHeight, options, dataId, setOption }: WidgetProps) {
         <Icon name="next" size={18} />
       </button>
       {shift !== 0 && (
-        <button className="bar-chip" onClick={() => setShift(0)}>{w >= 4 ? "Aujourd’hui" : "Auj."}</button>
+        <button className="bar-chip" onClick={() => setShift(0)}>{w >= 6 ? "Aujourd’hui" : "Auj."}</button>
       )}
-      {w >= 3 && <span className="bar-label ellipsis">{label}</span>}
+      {w >= 5 && <span className="bar-label ellipsis">{label}</span>}
       <div className="segmented" role="group" aria-label="Type de vue">
         {CALENDAR_VIEWS.map((v) => (
           <button
@@ -133,7 +133,7 @@ function Calendar({ w, bodyHeight, options, dataId, setOption }: WidgetProps) {
               setShift(0);
             }}
           >
-            {w >= 4 ? v.label : v.label.charAt(0)}
+            {w >= 6 ? v.label : v.label.charAt(0)}
           </button>
         ))}
       </div>
@@ -261,7 +261,7 @@ registerWidget({
   source: "default",
   access: "agendas connectés (lecture, via le serveur)",
   storesData: true,
-  sizes: { min: [2, 2], default: [6, 3], max: [8, 5] },
+  sizes: { min: [3, 2], default: [9, 3], max: [12, 5] },
   options: [{ key: "view", label: "Vue", choices: CALENDAR_VIEWS }],
   defaultOptions: { view: "week" },
   defaultShowTitle: true,

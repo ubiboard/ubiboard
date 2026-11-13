@@ -9,7 +9,7 @@ une tablette ou un téléphone.
 
 ## Ce qui fonctionne
 
-- **Écran d'accueil** sur une grille de 8 colonnes, en noir pur (pensé pour l'OLED).
+- **Écran d'accueil** sur une grille de 12 colonnes, en noir pur (pensé pour l'OLED).
 - **Deux modes** :
   - *lecture* : rien ne bouge, seuls les contenus sont interactifs (cocher un article, écrire un mot) ;
   - *édition* (bouton crayon) : placement libre des widgets par glisser-déposer, redimensionnement par le
@@ -114,7 +114,7 @@ registerWidget({
   description: "Ce qu'il affiche.",
   source: "default",
   access: "aucun",
-  sizes: { min: [2, 1], default: [2, 2], max: [4, 3] }, // [colonnes, lignes]
+  sizes: { min: [3, 1], default: [3, 2], max: [6, 3] }, // [colonnes sur 12, lignes]
   options: [
     { key: "mode", label: "Mode", choices: [{ value: "a", label: "A" }, { value: "b", label: "B" }] },
   ],

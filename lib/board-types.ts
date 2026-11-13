@@ -43,4 +43,4 @@ export const PERSON_COLORS = [
   "#C9C9D1",
 ];
 
-export const GRID_COLS = 8;
+export const GRID_COLS = 12;

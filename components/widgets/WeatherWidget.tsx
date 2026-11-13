@@ -15,10 +15,10 @@ function Weather({ w, h, options }: WidgetProps) {
   const now = useNow(60_000);
   const deg = (c: number) => (options.unit === "F" ? Math.round((c * 9) / 5 + 32) : c) + "°";
   const tall = h >= 2;
-  const narrow = w === 1;
+  const narrow = w <= 2;
   const big = narrow ? 32 : tall ? 56 : 40;
   const range = `Min ${deg(WEATHER.min)} · Max ${deg(WEATHER.max)}`;
-  const forecastRow = w >= 4 && h >= 2;
+  const forecastRow = w >= 6 && h >= 2;
   const forecastCol = !forecastRow && h >= 3;
   const days = WEATHER.forecast.slice(0, forecastRow ? 5 : 3).map((f) => {
     const d = new Date(now);
@@ -78,7 +78,7 @@ registerWidget({
   description: "Conditions actuelles et prévisions pour votre ville.",
   source: "default",
   access: "service météo (réseau)",
-  sizes: { min: [1, 1], default: [2, 1], max: [4, 3] },
+  sizes: { min: [2, 1], default: [3, 1], max: [6, 3] },
   options: [
     {
       key: "unit",

@@ -54,7 +54,7 @@ registerWidget({
   source: "default",
   access: "tâches du board (lecture ; écriture par les administrateurs)",
   storesData: true,
-  sizes: { min: [2, 2], default: [2, 3], max: [4, 5] },
+  sizes: { min: [3, 2], default: [3, 3], max: [6, 5] },
   options: [{ key: "who", label: "Personne affichée", choices: "people" }],
   defaultOptions: { who: "all" },
   defaultShowTitle: true,

@@ -128,7 +128,7 @@ registerWidget({
   source: "default",
   access: "emploi du temps du board (lecture ; écriture par les administrateurs)",
   storesData: true,
-  sizes: { min: [2, 2], default: [4, 3], max: [8, 5] },
+  sizes: { min: [3, 2], default: [6, 3], max: [12, 5] },
   options: [
     { key: "who", label: "Pour qui", choices: "people" },
     {

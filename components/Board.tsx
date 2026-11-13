@@ -312,8 +312,8 @@ export default function Board({
         if (!def) return cell;
         return {
           ...cell,
-          minW: def.sizes.min[0],
-          minH: def.sizes.min[1],
+          minW: Math.min(def.sizes.min[0], cell.w),
+          minH: Math.min(def.sizes.min[1], cell.h),
           maxW: def.sizes.max[0],
           maxH: def.sizes.max[1],
         };
@@ -697,7 +697,7 @@ function PhoneView({
     content = (
       <div className="phone-full">
         {placed ? (
-          <WidgetFrame widget={{ ...placed, showTitle: true }} w={2} h={5} height={46 * 12 + 64} />
+          <WidgetFrame widget={{ ...placed, showTitle: true }} w={3} h={5} height={46 * 12 + 64} />
         ) : (
           <div className="empty static">Ce board n’a pas de widget « {active.label} ».</div>
         )}
@@ -708,12 +708,12 @@ function PhoneView({
       <div className="phone-grid">
         {ordered.map((widget) => {
           const cell = state.layout.find((l) => l.i === widget.id);
-          const small = !!cell && cell.h === 1 && cell.w <= 2;
+          const small = !!cell && cell.h === 1 && cell.w <= 3;
           return (
             <div key={widget.id} className={small ? "phone-half" : "phone-wide"}>
               <WidgetFrame
                 widget={{ ...widget, showTitle: widget.type !== "clock" }}
-                w={2}
+                w={3}
                 h={small ? 2 : 3}
                 height={small ? 150 : 46 * 5 + 64}
               />
