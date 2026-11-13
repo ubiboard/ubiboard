@@ -1,6 +1,34 @@
-import { betterAuth, type BetterAuthPlugin } from "better-auth";
+import { betterAuth, type BetterAuthOptions, type BetterAuthPlugin } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db, schema } from "./db";
+
+/**
+ * L'adresse publique de l'appli, dont Better Auth a besoin pour vérifier
+ * l'origine des requêtes.
+ *
+ * - BETTER_AUTH_URL renseigné : on l'utilise tel quel (auto-hébergement).
+ * - Sur Vercel : l'adresse est celle de la requête, parmi les domaines du
+ *   déploiement (production, branche, aperçu).
+ * - Sinon : développement local.
+ */
+function resolveBaseURL(): BetterAuthOptions["baseURL"] {
+  if (process.env.BETTER_AUTH_URL) return process.env.BETTER_AUTH_URL;
+
+  const local = ["localhost:*", "127.0.0.1:*"];
+  if (!process.env.VERCEL) {
+    return { allowedHosts: local, fallback: "http://localhost:3000", protocol: "http" };
+  }
+
+  const production = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  const hosts = [production, process.env.VERCEL_BRANCH_URL, process.env.VERCEL_URL].filter(
+    (h): h is string => !!h
+  );
+  return {
+    allowedHosts: [...hosts, "*.vercel.app"],
+    fallback: production ? `https://${production}` : undefined,
+    protocol: "https",
+  };
+}
 
 /**
  * Configuration des comptes, sans dépendance à Next.js : utilisée telle quelle
@@ -9,6 +37,7 @@ import { db, schema } from "./db";
  */
 export function createAuth(plugins: BetterAuthPlugin[] = []) {
   return betterAuth({
+    baseURL: resolveBaseURL(),
     database: drizzleAdapter(db, { provider: "pg", schema }),
     emailAndPassword: {
       enabled: true,
