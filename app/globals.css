@@ -548,6 +548,34 @@ button {
 .day-num { font-family: var(--font-head); font-size: 22px; font-weight: 500; }
 
 .cal-days { display: grid; gap: 10px; min-height: 0; }
+.cal-more { font-size: 12px; color: var(--dim); padding-left: 4px; }
+.cal-when { flex: none; width: 92px; }
+.dot.small { width: 7px; height: 7px; }
+.slot-dot.round { height: 14px; }
+
+/* Vue mois */
+.cal-month { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 4px; }
+.cal-month-head { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; height: 20px; }
+.cal-month-head span { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); padding-left: 6px; }
+.cal-month-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.cal-cell {
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  padding: 3px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.cal-cell.other { background: transparent; }
+.cal-cell.other .cal-cell-num { color: var(--border-4); }
+.cal-cell.today { border-color: var(--accent); }
+.cal-cell.today .cal-cell-num { color: var(--accent); }
+.cal-cell-num { display: flex; align-items: center; gap: 4px; font-family: var(--font-head); font-size: 13px; font-weight: 500; color: var(--muted); line-height: 18px; }
+.cal-chip { display: flex; align-items: center; gap: 4px; min-width: 0; font-size: 12px; line-height: 16px; }
+.cal-cell .cal-more { padding-left: 0; line-height: 16px; }
 .cal-day { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .card { background: var(--surface-2); border-radius: 12px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .card-time { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
@@ -648,7 +676,8 @@ button {
   font-size: 14px;
   font-weight: 500;
 }
-.segmented { margin-left: auto; display: inline-flex; border: 1px solid var(--border-3); border-radius: 18px; overflow: hidden; }
+.bar-label { min-width: 0; margin-left: 6px; font-size: 15px; font-weight: 500; }
+.segmented { margin-left: auto; flex: none; display: inline-flex; border: 1px solid var(--border-3); border-radius: 18px; overflow: hidden; }
 .segmented button { height: 34px; padding: 0 14px; border: 0; background: transparent; font-size: 14px; font-weight: 500; color: var(--muted); }
 .segmented button.on { background: var(--accent); color: var(--accent-ink); }
 .school { flex: 1; min-height: 0; display: grid; gap: 12px; overflow: hidden; align-content: start; }

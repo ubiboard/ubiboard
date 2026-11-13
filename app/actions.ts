@@ -5,6 +5,10 @@ import { getCurrentUser } from "@/lib/auth";
 import { getRole, loadBoardView } from "@/lib/boards";
 import { db, schema } from "@/lib/db";
 import { GRID_COLS, PERSON_COLORS, type BoardRole, type BoardState, type DataItem } from "@/lib/board-types";
+import type { CalendarResult } from "@/lib/calendar";
+import { loadCalendarEvents } from "@/lib/calendar-server";
+import { decryptSecret } from "@/lib/crypto";
+import { policyFor, redact } from "@/lib/data-policy";
 
 const { view, widget, dataItem, boardMember } = schema;
 
@@ -104,6 +108,7 @@ export async function getBoardView(boardId: string): Promise<BoardState> {
  */
 const USAGE_OPTIONS: Record<string, Record<string, string[]>> = {
   school: { span: ["2j", "week"] },
+  calendar: { view: ["month", "week", "day", "list"] },
 };
 
 export async function setWidgetOption(boardId: string, widgetId: string, key: string, value: string): Promise<void> {
@@ -130,41 +135,32 @@ export async function setPersonColor(boardId: string, userId: string, color: str
     .where(and(eq(boardMember.boardId, boardId), eq(boardMember.userId, userId)));
 }
 
-/**
- * Types de widget dont les données ne sont modifiables que par les
- * administrateurs du board (les membres les lisent). Les autres listes sont
- * modifiables par tous les membres.
- */
-const ADMIN_WRITE_TYPES = new Set(["chores", "school"]);
+/* ------------------------------------------------------------------ */
+/* Données des widgets                                                 */
+/* ------------------------------------------------------------------ */
 
-/**
- * Vérifie que l'utilisateur connecté peut écrire dans cette liste, qui doit
- * être affichée par un widget du board.
- */
-async function requireListWrite(boardId: string, dataId: string) {
-  const access = await requireRole(boardId, "member");
-  if (!UUID.test(dataId)) throw new Error("Liste inconnue.");
+/** Les types de widget qui affichent cette liste sur le board (aucun = liste inconnue). */
+async function typesOfList(boardId: string, dataId: string): Promise<string[]> {
+  if (!UUID.test(dataId)) return [];
   const found = await db
     .select({ type: widget.type })
     .from(widget)
     .innerJoin(view, eq(view.id, widget.viewId))
     .where(and(eq(view.boardId, boardId), eq(widget.dataId, dataId)));
-  if (found.length === 0) throw new Error("Liste inconnue.");
-  if (access.role !== "admin" && found.some((w) => ADMIN_WRITE_TYPES.has(w.type))) {
-    throw new Error("Réservé aux administrateurs du board.");
-  }
-  return access;
+  return found.map((w) => w.type);
 }
 
-/** Même vérification, à partir d'un élément existant. */
-async function requireItemWrite(boardId: string, itemId: string) {
-  if (!UUID.test(boardId) || !UUID.test(itemId)) throw new Error("Élément inconnu.");
-  const [item] = await db
-    .select({ dataId: dataItem.dataId })
-    .from(dataItem)
-    .where(and(eq(dataItem.id, itemId), eq(dataItem.boardId, boardId)));
-  if (!item) throw new Error("Élément inconnu.");
-  return requireListWrite(boardId, item.dataId);
+/**
+ * Vérifie que l'utilisateur connecté peut écrire dans cette liste, selon les
+ * règles de son type de widget (lib/data-policy.ts).
+ */
+async function requireListWrite(boardId: string, dataId: string) {
+  const access = await requireRole(boardId, "member");
+  const types = await typesOfList(boardId, dataId);
+  if (types.length === 0) throw new Error("Liste inconnue.");
+  const policy = policyFor(types);
+  if (policy.adminWrite && access.role !== "admin") throw new Error("Réservé aux administrateurs du board.");
+  return { ...access, policy };
 }
 
 function checkContent(content: unknown): Record<string, unknown> {
@@ -173,15 +169,18 @@ function checkContent(content: unknown): Record<string, unknown> {
   return content as Record<string, unknown>;
 }
 
-/** Les éléments d'une liste (membres et administrateurs). */
+/** Les éléments d'une liste (membres et administrateurs), sans leurs champs secrets. */
 export async function listItems(boardId: string, dataId: string): Promise<DataItem[]> {
   await requireRole(boardId, "member");
-  if (!UUID.test(dataId)) return [];
-  return db
+  const types = await typesOfList(boardId, dataId);
+  if (types.length === 0) return [];
+  const policy = policyFor(types);
+  const rows = await db
     .select({ id: dataItem.id, content: dataItem.content })
     .from(dataItem)
     .where(and(eq(dataItem.boardId, boardId), eq(dataItem.dataId, dataId)))
     .orderBy(asc(dataItem.position), asc(dataItem.createdAt));
+  return rows.map((r) => ({ id: r.id, content: redact(policy, r.content) }));
 }
 
 /** Nombre d'éléments d'une liste : sert à prévenir avant de supprimer un widget. */
@@ -196,30 +195,86 @@ export async function countItems(boardId: string, dataId: string): Promise<numbe
 }
 
 export async function addItem(boardId: string, dataId: string, content: unknown): Promise<DataItem> {
-  const { user } = await requireListWrite(boardId, dataId);
+  const { user, policy } = await requireListWrite(boardId, dataId);
+  const checked = checkContent(content);
   const [created] = await db
     .insert(dataItem)
     .values({
       boardId,
       dataId,
-      content: checkContent(content),
+      content: policy.prepare ? policy.prepare(checked, null) : checked,
       createdBy: user.id,
       // Ajout en fin de liste.
       position: sql`(select coalesce(max(${dataItem.position}), 0) + 1 from ${dataItem} where ${dataItem.boardId} = ${boardId} and ${dataItem.dataId} = ${dataId})`,
     })
     .returning({ id: dataItem.id, content: dataItem.content });
-  return created;
+  return { id: created.id, content: redact(policy, created.content) };
+}
+
+/** L'élément existant et le droit d'y écrire. */
+async function requireItemWrite(boardId: string, itemId: string) {
+  if (!UUID.test(boardId) || !UUID.test(itemId)) throw new Error("Élément inconnu.");
+  const [item] = await db
+    .select({ dataId: dataItem.dataId, content: dataItem.content })
+    .from(dataItem)
+    .where(and(eq(dataItem.id, itemId), eq(dataItem.boardId, boardId)));
+  if (!item) throw new Error("Élément inconnu.");
+  const access = await requireListWrite(boardId, item.dataId);
+  return { ...access, item };
 }
 
 export async function updateItem(boardId: string, itemId: string, content: unknown): Promise<void> {
-  await requireItemWrite(boardId, itemId);
+  const { policy, item } = await requireItemWrite(boardId, itemId);
+  const checked = checkContent(content);
   await db
     .update(dataItem)
-    .set({ content: checkContent(content), updatedAt: new Date() })
+    .set({ content: policy.prepare ? policy.prepare(checked, item.content) : checked, updatedAt: new Date() })
     .where(and(eq(dataItem.id, itemId), eq(dataItem.boardId, boardId)));
 }
 
 export async function deleteItem(boardId: string, itemId: string): Promise<void> {
   await requireItemWrite(boardId, itemId);
   await db.delete(dataItem).where(and(eq(dataItem.id, itemId), eq(dataItem.boardId, boardId)));
+}
+
+/* ------------------------------------------------------------------ */
+/* Calendrier                                                          */
+/* ------------------------------------------------------------------ */
+
+const MAX_RANGE_DAYS = 100;
+
+/**
+ * Les événements des agendas d'un widget Calendrier sur une période. Les
+ * liens des agendas sont déchiffrés et lus ici, côté serveur : ils ne
+ * quittent jamais le serveur.
+ */
+export async function getCalendarEvents(boardId: string, dataId: string, fromIso: string, toIso: string): Promise<CalendarResult> {
+  await requireRole(boardId, "member");
+  const types = await typesOfList(boardId, dataId);
+  if (!types.includes("calendar")) return { events: [], errors: [] };
+
+  const from = new Date(fromIso);
+  const to = new Date(toIso);
+  const days = (to.getTime() - from.getTime()) / 86_400_000;
+  if (!Number.isFinite(days) || days <= 0 || days > MAX_RANGE_DAYS) throw new Error("Période invalide.");
+
+  const sources = await db
+    .select({ id: dataItem.id, content: dataItem.content })
+    .from(dataItem)
+    .where(and(eq(dataItem.boardId, boardId), eq(dataItem.dataId, dataId)));
+
+  const result: CalendarResult = { events: [], errors: [] };
+  await Promise.all(
+    sources.map(async (source) => {
+      try {
+        const url = decryptSecret(String(source.content.url ?? ""));
+        result.events.push(...(await loadCalendarEvents(source.id, url, from, to)));
+      } catch (err) {
+        // Le message ne contient jamais le lien.
+        const message = err instanceof Error && !/https?:/i.test(err.message) ? err.message : "Agenda illisible.";
+        result.errors.push({ sourceId: source.id, message });
+      }
+    })
+  );
+  return result;
 }

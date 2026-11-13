@@ -4,9 +4,8 @@ Hub familial open source, web et auto-hébergeable : un écran d'accueil façon 
 redimensionnables et configurables, pensé pour un écran mural tactile mais accessible aussi depuis un PC,
 une tablette ou un téléphone.
 
-> Projet à ses débuts. Les tâches, l'emploi du temps, la liste de courses et le mot de la famille sont réels
-> et enregistrés en base ; le calendrier et la météo affichent encore des **données factices** : aucun
-> connecteur (agenda, météo, école, domotique) n'est branché.
+> Projet à ses débuts. Le calendrier, les tâches, l'emploi du temps, la liste de courses et le mot de la
+> famille sont réels ; seule la météo affiche encore des **données factices**.
 
 ## Ce qui fonctionne
 
@@ -20,6 +19,9 @@ une tablette ou un téléphone.
   Chacun adapte son affichage à sa taille.
 - **Tâches** : ponctuelles ou récurrentes (chaque N jours, semaines, mois ou années), affectées à une ou plusieurs
   personnes avec roulement automatique. Le widget montre qui doit faire quoi aujourd'hui.
+- **Calendrier** : un ou plusieurs agendas connectés par leur lien iCal (Google Agenda, Outlook, iCloud,
+  CalDAV…), chacun avec sa couleur. Quatre vues : mois, semaine, jour, liste. Lecture seule. Les liens sont
+  chiffrés en base et lus uniquement par le serveur.
 - **Emploi du temps** : des créneaux saisis à la main pour chaque jour de la semaine, avec une couleur de fond.
   Les créneaux à la même heure sont alignés d'un jour à l'autre, et les trous communs sont réduits.
 - **Configuration par widget** dans une modale générée depuis la définition du widget.
@@ -44,7 +46,8 @@ Il faut Node.js 20.6 ou plus récent et une base PostgreSQL (par exemple [Neon](
    npm install
    ```
 
-2. Copier `.env.example` en `.env.local` et renseigner `DATABASE_URL` et `BETTER_AUTH_SECRET`.
+2. Copier `.env.example` en `.env.local` et renseigner `DATABASE_URL`, `BETTER_AUTH_SECRET` et
+   `DATA_ENCRYPTION_KEY`.
 
 3. Créer les tables :
 
@@ -96,6 +99,8 @@ celui qu'il a rejoint en dernier.
 | `scripts/board.ts` | Ajout et retrait de personnes sur un board en ligne de commande |
 | `lib/tasks.ts` | Récurrence et roulement des tâches (calcul et phrases en clair) |
 | `lib/timetable.ts` | Créneaux de l'emploi du temps et calcul de leur position |
+| `lib/calendar.ts`, `lib/calendar-server.ts` | Calendrier : types et dates ; lecture et dépliage des agendas iCal côté serveur |
+| `lib/data-policy.ts`, `lib/crypto.ts` | Règles par type de widget (écriture réservée, champs secrets) et chiffrement des secrets |
 | `lib/demo-data.ts` | Données factices |
 
 ## Ajouter un widget
@@ -129,8 +134,11 @@ réglage peut proposer ces personnes avec `choices: "people"`.
 
 Un widget dont les données se gèrent dans une grande fenêtre (créer, modifier, supprimer) fournit un composant
 `Manager` : il s'affiche dans la configuration du widget, en mode édition. Voir `TasksWidget.tsx` et
-`TasksManager.tsx`. Pour réserver l'écriture de ses données aux administrateurs, ajouter son type à
-`ADMIN_WRITE_TYPES` dans `app/actions.ts`.
+`TasksManager.tsx`. Les règles côté serveur d'un type de widget se déclarent dans `lib/data-policy.ts` : écriture
+réservée aux administrateurs, champs secrets jamais renvoyés au navigateur, validation avant enregistrement.
+
+Un réglage que tout membre peut changer depuis le widget (un type de vue, par exemple) passe par `setOption` et
+doit être déclaré dans `USAGE_OPTIONS` (`app/actions.ts`).
 
 Il suffit ensuite de l'importer dans `components/widgets/index.ts` : il apparaît dans le tiroir d'ajout et
 dans la boutique, avec sa modale de réglages.
@@ -139,8 +147,8 @@ dans la boutique, avec sa modale de réglages.
 
 1. Plusieurs boards par compte, partage entre membres et administrateurs.
 2. Lien public en lecture seule, vues personnelles, appairage d'un écran mural par code.
-3. Premier vrai connecteur : calendrier (Google Calendar, CalDAV).
-4. Synchronisation des emplois du temps scolaires (Ecole Directe, Pronote), météo réelle.
+3. Synchronisation des emplois du temps scolaires (Ecole Directe, Pronote), météo réelle.
+4. Rappels et alertes.
 5. Plugins communautaires isolés, décrits par un manifeste.
 6. Home Assistant et serveur MCP.
 
