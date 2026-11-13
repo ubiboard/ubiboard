@@ -1,5 +1,6 @@
 import { betterAuth, type BetterAuthOptions, type BetterAuthPlugin } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { username } from "better-auth/plugins";
 import { db, schema } from "./db";
 
 /**
@@ -30,6 +31,10 @@ function resolveBaseURL(): BetterAuthOptions["baseURL"] {
   };
 }
 
+export const MIN_PASSWORD_LENGTH = 6;
+
+const DAY = 60 * 60 * 24;
+
 /**
  * Configuration des comptes, sans dépendance à Next.js : utilisée telle quelle
  * par les scripts (scripts/user.ts), et avec le plugin de cookies par l'appli
@@ -44,9 +49,13 @@ export function createAuth(plugins: BetterAuthPlugin[] = []) {
       // Pas d'inscription publique : les comptes sont créés par commande
       // (npm run user:create).
       disableSignUp: true,
-      minPasswordLength: 8,
+      minPasswordLength: MIN_PASSWORD_LENGTH,
     },
-    plugins,
+    // Un écran mural ou un téléphone reste connecté : la session dure 90 jours
+    // et se prolonge d'elle-même tant que l'appareil sert.
+    session: { expiresIn: 90 * DAY, updateAge: DAY },
+    // Connexion par identifiant court, en plus de l'adresse e-mail.
+    plugins: [username({ minUsernameLength: 2 }), ...plugins],
   });
 }
 

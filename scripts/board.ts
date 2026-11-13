@@ -2,21 +2,24 @@
  * Gestion des boards en ligne de commande, en attendant l'écran de partage.
  *
  *   npm run board:list
- *   npm run board:add -- <email à ajouter> <email d'un administrateur du board> [membre|admin]
- *   npm run board:remove -- <email à retirer> <email d'un administrateur du board>
+ *   npm run board:add -- <compte à ajouter> <un administrateur du board> [membre|admin]
+ *   npm run board:remove -- <compte à retirer> <un administrateur du board>
+ *
+ * Un compte se désigne par son identifiant ou son adresse e-mail.
  *
  * Le board visé est celui que l'administrateur indiqué voit en se connectant.
  * La personne ajoutée doit déjà avoir un compte (npm run user:create).
  */
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, or } from "drizzle-orm";
 import { db, schema } from "../lib/db";
 
 const { user, board, boardMember } = schema;
 
-async function findUser(email: string | undefined) {
-  if (!email) throw new Error("Adresse e-mail manquante.");
-  const [found] = await db.select().from(user).where(eq(user.email, email.trim().toLowerCase()));
-  if (!found) throw new Error(`Aucun compte pour ${email}.`);
+async function findUser(key: string | undefined) {
+  const value = key?.trim().toLowerCase();
+  if (!value) throw new Error("Identifiant manquant.");
+  const [found] = await db.select().from(user).where(or(eq(user.username, value), eq(user.email, value)));
+  if (!found) throw new Error(`Aucun compte pour « ${value} ».`);
   return found;
 }
 
@@ -30,8 +33,8 @@ async function boardOfAdmin(adminEmail: string | undefined) {
     .where(eq(boardMember.userId, admin.id))
     .orderBy(desc(boardMember.createdAt), asc(board.id))
     .limit(1);
-  if (!home) throw new Error(`${admin.email} n'a pas encore de board : il se crée à sa première connexion.`);
-  if (home.role !== "admin") throw new Error(`${admin.email} n'est pas administrateur du board « ${home.name} ».`);
+  if (!home) throw new Error(`${admin.name} n'a pas encore de board : il se crée à sa première connexion.`);
+  if (home.role !== "admin") throw new Error(`${admin.name} n'est pas administrateur du board « ${home.name} ».`);
   return home;
 }
 
@@ -40,7 +43,7 @@ async function main() {
 
   if (command === "list") {
     const rows = await db
-      .select({ boardId: board.id, board: board.name, email: user.email, name: user.name, role: boardMember.role })
+      .select({ boardId: board.id, board: board.name, username: user.username, name: user.name, role: boardMember.role })
       .from(boardMember)
       .innerJoin(board, eq(board.id, boardMember.boardId))
       .innerJoin(user, eq(user.id, boardMember.userId))
@@ -51,7 +54,7 @@ async function main() {
         current = r.boardId;
         console.log(`\nBoard « ${r.board} »`);
       }
-      console.log(`  ${r.role === "admin" ? "administrateur" : "membre        "}  ${r.name} <${r.email}>`);
+      console.log(`  ${r.role === "admin" ? "administrateur" : "membre        "}  ${r.name} (${r.username ?? "sans identifiant"})`);
     }
     if (rows.length === 0) console.log("Aucun board.");
     return;

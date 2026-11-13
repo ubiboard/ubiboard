@@ -24,7 +24,8 @@ une tablette ou un téléphone.
 - **Réglages d'écran** : atténuation et anti-rémanence.
 - **Vue téléphone** : mêmes widgets empilés, avec une barre d'onglets (sans mode édition).
 - **Boutique de plugins** (`/boutique`) : vitrine statique et format de manifeste proposé.
-- **Comptes et connexion** : un compte par personne, sans inscription publique (comptes créés en ligne de commande).
+- **Comptes et connexion** : un compte par personne, sans inscription publique (comptes créés en ligne de
+  commande). On se connecte avec un identifiant court ; l'adresse e-mail est facultative. La session dure 90 jours.
 - **Enregistrement en base** : la disposition du board et les données des widgets sont stockées dans PostgreSQL
   et partagées entre les appareils.
 - **Rôles** : un administrateur du board modifie la disposition ; un membre utilise les widgets.
@@ -52,7 +53,7 @@ Il faut Node.js 20.6 ou plus récent et une base PostgreSQL (par exemple [Neon](
 4. Créer un compte (le mot de passe est demandé au clavier) :
 
    ```bash
-   npm run user:create -- vous@exemple.org "Votre nom"
+   npm run user:create -- identifiant "Votre nom"
    ```
 
 5. Lancer l'appli, puis ouvrir http://localhost:3000 :
@@ -68,12 +69,13 @@ celui qu'il a rejoint en dernier.
 
 | Commande | Rôle |
 |---|---|
-| `npm run user:create -- <email> "<nom>"` | Créer un compte |
-| `npm run user:password -- <email>` | Changer un mot de passe |
+| `npm run user:create -- <identifiant> "<nom>" [email]` | Créer un compte |
+| `npm run user:password -- <identifiant>` | Changer un mot de passe |
+| `npm run user:username -- <identifiant> <nouvel identifiant>` | Changer un identifiant de connexion |
 | `npm run user:list` | Lister les comptes |
 | `npm run board:list` | Lister les boards et leurs personnes |
-| `npm run board:add -- <email> <email d'un admin du board> [membre\|admin]` | Ajouter un compte existant à un board, ou changer son rôle |
-| `npm run board:remove -- <email> <email d'un admin du board>` | Retirer quelqu'un d'un board |
+| `npm run board:add -- <identifiant> <identifiant d'un admin du board> [membre\|admin]` | Ajouter un compte existant à un board, ou changer son rôle |
+| `npm run board:remove -- <identifiant> <identifiant d'un admin du board>` | Retirer quelqu'un d'un board |
 | `npm run db:generate` | Générer une migration après une modification de `lib/db/schema.ts` |
 | `npm run db:migrate` | Appliquer les migrations |
 

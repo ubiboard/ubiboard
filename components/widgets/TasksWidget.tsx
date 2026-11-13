@@ -36,8 +36,9 @@ function Tasks({ bodyHeight, options, dataId }: WidgetProps) {
         return (
           <div key={row.id} className="list-row">
             <span className="chore-name">{row.name}</span>
-            <span className="badge" style={{ background: person.color }}>{person.name.charAt(0).toUpperCase()}</span>
-            <span className="chore-who" style={{ color: person.color }}>{person.name}</span>
+            <span className="badge" style={{ background: person.color }} title={person.name} aria-label={person.name}>
+              {person.name.charAt(0).toUpperCase()}
+            </span>
           </div>
         );
       })}

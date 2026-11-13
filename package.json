@@ -16,7 +16,8 @@
     "user:list": "node --env-file=.env.local --import tsx scripts/user.ts list",
     "board:list": "node --env-file=.env.local --import tsx scripts/board.ts list",
     "board:add": "node --env-file=.env.local --import tsx scripts/board.ts add",
-    "board:remove": "node --env-file=.env.local --import tsx scripts/board.ts remove"
+    "board:remove": "node --env-file=.env.local --import tsx scripts/board.ts remove",
+    "user:username": "node --env-file=.env.local --import tsx scripts/user.ts username"
   },
   "dependencies": {
     "better-auth": "^1.7.22",

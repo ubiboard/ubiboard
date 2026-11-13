@@ -15,6 +15,13 @@
       "when": 1794576246536,
       "tag": "0001_public_speedball",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794578635452,
+      "tag": "0002_windy_purple_man",
+      "breakpoints": true
     }
   ]
 }
