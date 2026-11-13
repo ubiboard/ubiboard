@@ -13,7 +13,15 @@ import type { ComponentType } from "react";
 export type WidgetOption = {
   key: string;
   label: string;
-  choices: { value: string; label: string }[];
+  /** Liste fixe, ou "people" : « Tous » puis les personnes du board (la valeur est leur identifiant). */
+  choices: { value: string; label: string }[] | "people";
+};
+
+/** Ce que reçoit la fenêtre de gestion d'un widget. */
+export type ManagerProps = {
+  dataId: string;
+  /** Faux tant que le widget vient d'être ajouté et n'est pas encore enregistré. */
+  saved: boolean;
 };
 
 export type WidgetOptions = Record<string, string>;
@@ -56,6 +64,12 @@ export type WidgetDefinition = {
   /** Titre affiché en haut du widget (peut dépendre des réglages). */
   title: (options: WidgetOptions) => string;
   Component: ComponentType<WidgetProps>;
+  /**
+   * Fenêtre de gestion des données du widget (créer, modifier, supprimer),
+   * affichée en grand dans sa configuration, en mode édition.
+   */
+  Manager?: ComponentType<ManagerProps>;
+  managerTitle?: string;
 };
 
 const REGISTRY: Record<string, WidgetDefinition> = {};

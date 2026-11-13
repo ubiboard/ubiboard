@@ -419,10 +419,20 @@ export default function Board({
 
         {configWidget && configDef && (
           <Modal
-            title={configDef.name}
+            title={configDef.managerTitle ?? configDef.name}
             subtitle={configDef.source === "default" ? "Plugin par défaut" : "Plugin communautaire"}
+            size={configDef.Manager ? "large" : "normal"}
             onClose={() => setConfigId(null)}
           >
+            {configDef.Manager && (
+              <>
+                <configDef.Manager
+                  dataId={configWidget.dataId}
+                  saved={saved.widgets.some((w) => w.id === configWidget.id)}
+                />
+                <div className="modal-divider">Réglages du widget</div>
+              </>
+            )}
             <div>
               <label className="field-label" htmlFor="widget-title">Titre</label>
               <input
@@ -434,12 +444,21 @@ export default function Board({
                 onChange={(e) => patchWidget(configWidget.id, { title: e.target.value || null })}
               />
             </div>
-            {configDef.options.map((opt) => (
+            {configDef.options.map((opt) => {
+              const stored = configWidget.options[opt.key];
+              const byPerson = opt.choices === "people";
+              const choices =
+                opt.choices === "people"
+                  ? [{ value: "all", label: "Tous" }, ...people.map((p) => ({ value: p.userId, label: p.name }))]
+                  : opt.choices;
+              // Une valeur qui ne correspond plus à personne revient à « Tous ».
+              const current = byPerson && !people.some((p) => p.userId === stored) ? "all" : stored;
+              return (
               <div key={opt.key}>
                 <div className="field-label">{opt.label}</div>
                 <div className="chips">
-                  {opt.choices.map((choice) => {
-                    const on = configWidget.options[opt.key] === choice.value;
+                  {choices.map((choice) => {
+                    const on = current === choice.value;
                     return (
                       <button
                         key={choice.value}
@@ -455,7 +474,8 @@ export default function Board({
                   })}
                 </div>
               </div>
-            ))}
+              );
+            })}
             <div className="setting">
               <span>Afficher le titre</span>
               <Switch
@@ -594,7 +614,7 @@ const TABS: { key: string; label: string; icon: IconName; type?: string }[] = [
   { key: "home", label: "Accueil", icon: "home" },
   { key: "calendar", label: "Agenda", icon: "calendar", type: "calendar" },
   { key: "shopping", label: "Courses", icon: "cart", type: "shopping" },
-  { key: "chores", label: "Corvées", icon: "repeat", type: "chores" },
+  { key: "chores", label: "Tâches", icon: "repeat", type: "chores" },
 ];
 
 function PhoneView({

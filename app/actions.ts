@@ -102,16 +102,41 @@ export async function setPersonColor(boardId: string, userId: string, color: str
     .where(and(eq(boardMember.boardId, boardId), eq(boardMember.userId, userId)));
 }
 
-/** Vérifie que cette liste est bien affichée par un widget du board. */
-async function assertListOnBoard(boardId: string, dataId: string) {
+/**
+ * Types de widget dont les données ne sont modifiables que par les
+ * administrateurs du board (les membres les lisent). Les autres listes sont
+ * modifiables par tous les membres.
+ */
+const ADMIN_WRITE_TYPES = new Set(["chores"]);
+
+/**
+ * Vérifie que l'utilisateur connecté peut écrire dans cette liste, qui doit
+ * être affichée par un widget du board.
+ */
+async function requireListWrite(boardId: string, dataId: string) {
+  const access = await requireRole(boardId, "member");
   if (!UUID.test(dataId)) throw new Error("Liste inconnue.");
-  const [found] = await db
-    .select({ id: widget.id })
+  const found = await db
+    .select({ type: widget.type })
     .from(widget)
     .innerJoin(view, eq(view.id, widget.viewId))
-    .where(and(eq(view.boardId, boardId), eq(widget.dataId, dataId)))
-    .limit(1);
-  if (!found) throw new Error("Liste inconnue.");
+    .where(and(eq(view.boardId, boardId), eq(widget.dataId, dataId)));
+  if (found.length === 0) throw new Error("Liste inconnue.");
+  if (access.role !== "admin" && found.some((w) => ADMIN_WRITE_TYPES.has(w.type))) {
+    throw new Error("Réservé aux administrateurs du board.");
+  }
+  return access;
+}
+
+/** Même vérification, à partir d'un élément existant. */
+async function requireItemWrite(boardId: string, itemId: string) {
+  if (!UUID.test(boardId) || !UUID.test(itemId)) throw new Error("Élément inconnu.");
+  const [item] = await db
+    .select({ dataId: dataItem.dataId })
+    .from(dataItem)
+    .where(and(eq(dataItem.id, itemId), eq(dataItem.boardId, boardId)));
+  if (!item) throw new Error("Élément inconnu.");
+  return requireListWrite(boardId, item.dataId);
 }
 
 function checkContent(content: unknown): Record<string, unknown> {
@@ -143,8 +168,7 @@ export async function countItems(boardId: string, dataId: string): Promise<numbe
 }
 
 export async function addItem(boardId: string, dataId: string, content: unknown): Promise<DataItem> {
-  const { user } = await requireRole(boardId, "member");
-  await assertListOnBoard(boardId, dataId);
+  const { user } = await requireListWrite(boardId, dataId);
   const [created] = await db
     .insert(dataItem)
     .values({
@@ -160,8 +184,7 @@ export async function addItem(boardId: string, dataId: string, content: unknown)
 }
 
 export async function updateItem(boardId: string, itemId: string, content: unknown): Promise<void> {
-  await requireRole(boardId, "member");
-  if (!UUID.test(itemId)) throw new Error("Élément inconnu.");
+  await requireItemWrite(boardId, itemId);
   await db
     .update(dataItem)
     .set({ content: checkContent(content), updatedAt: new Date() })
@@ -169,7 +192,6 @@ export async function updateItem(boardId: string, itemId: string, content: unkno
 }
 
 export async function deleteItem(boardId: string, itemId: string): Promise<void> {
-  await requireRole(boardId, "member");
-  if (!UUID.test(itemId)) throw new Error("Élément inconnu.");
+  await requireItemWrite(boardId, itemId);
   await db.delete(dataItem).where(and(eq(dataItem.id, itemId), eq(dataItem.boardId, boardId)));
 }

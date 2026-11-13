@@ -3,7 +3,7 @@
 import "./ClockWidget";
 import "./WeatherWidget";
 import "./CalendarWidget";
-import "./ChoresWidget";
+import "./TasksWidget";
 import "./ShoppingWidget";
 import "./SchoolWidget";
 import "./NoteWidget";

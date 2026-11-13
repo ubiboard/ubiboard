@@ -82,16 +82,3 @@ export const SCHOOL: Record<string, Record<number, Slot[]>> = {
     5: primary(["Maths", "Dictée", "Anglais", "Sciences"]),
   },
 };
-
-/**
- * Corvées factices : le résultat affiché uniquement. Le vrai modèle
- * (rotations de rôles, responsabilités cochables ou non) reste à concevoir.
- */
-export const CHORES: { name: string; who: string }[] = [
-  { name: "Mettre la table", who: "Jade" },
-  { name: "Débarrasser la table", who: "Léo" },
-  { name: "Donner à manger au chat", who: "Jade" },
-  { name: "Nettoyer l’aspirateur robot", who: "Alex" },
-  { name: "Débarrasser le lave-vaisselle", who: "Léo" },
-  { name: "Ranger le linge", who: "Camille" },
-];

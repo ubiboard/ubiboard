@@ -13,6 +13,7 @@
   --accent-hover: #a6edc8;
   --accent-ink: #04140c;
   --accent-border: #2f6b52;
+  color-scheme: dark; /* listes déroulantes et barres de défilement natives en sombre */
   --font-body: var(--font-inter), system-ui, sans-serif;
   --font-head: var(--font-display), var(--font-inter), system-ui, sans-serif;
 }
@@ -34,6 +35,7 @@ body {
 
 button,
 input,
+select,
 textarea {
   font-family: inherit;
   color: inherit;
@@ -379,6 +381,16 @@ button {
   flex-direction: column;
   gap: 22px;
 }
+.modal.large { max-width: 760px; }
+.modal-divider {
+  border-top: 1px solid var(--border);
+  padding-top: 18px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
 .modal-head {
   display: flex;
   align-items: flex-start;
@@ -413,6 +425,35 @@ button {
 .swatches { display: flex; flex-wrap: wrap; gap: 8px; }
 .swatch { width: 36px; height: 36px; border-radius: 18px; border: 2px solid transparent; padding: 0; }
 .swatch.on { border-color: var(--text); box-shadow: 0 0 0 2px var(--bg) inset; }
+/* Gestion des tâches */
+.task-list, .task-form { display: flex; flex-direction: column; gap: 14px; }
+.task-form { gap: 22px; }
+.task-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border-2);
+  border-radius: 18px;
+  padding: 10px 12px 10px 16px;
+}
+.task-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.task-repeat { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; font-size: 16px; }
+.task-number { flex: none; width: 84px; }
+.task-select { flex: none; width: auto; padding-right: 12px; }
+.weekdays { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.weekday {
+  width: 44px;
+  height: 44px;
+  border-radius: 22px;
+  border: 1px solid var(--border-3);
+  background: transparent;
+  font-size: 15px;
+  font-weight: 600;
+}
+.weekday.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.task-phrase { margin-top: 12px; color: var(--accent); font-size: 15px; }
+.person-chip { display: inline-flex; align-items: center; gap: 8px; padding-left: 9px; }
+.chip { display: inline-flex; align-items: center; gap: 8px; }
 .info-box {
   border: 1px solid var(--border);
   border-radius: 18px;

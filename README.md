@@ -4,9 +4,9 @@ Hub familial open source, web et auto-hébergeable : un écran d'accueil façon 
 redimensionnables et configurables, pensé pour un écran mural tactile mais accessible aussi depuis un PC,
 une tablette ou un téléphone.
 
-> Projet à ses débuts. La liste de courses et le mot de la famille sont réels et enregistrés en base ; les
-> autres widgets affichent encore des **données factices** : aucun connecteur (agenda, météo, école,
-> domotique) n'est branché.
+> Projet à ses débuts. Les tâches, la liste de courses et le mot de la famille sont réels et enregistrés en
+> base ; le calendrier, l'emploi du temps et la météo affichent encore des **données factices** : aucun
+> connecteur (agenda, météo, école, domotique) n'est branché.
 
 ## Ce qui fonctionne
 
@@ -16,8 +16,10 @@ une tablette ou un téléphone.
   - *édition* (bouton crayon) : placement libre des widgets par glisser-déposer, redimensionnement par le
     coin inférieur droit, ajout, suppression et configuration. Rien n'est enregistré tant qu'on n'a pas
     cliqué **Enregistrer** ; **Annuler** jette le brouillon.
-- **Sept widgets par défaut** : Horloge, Météo, Calendrier, Corvées, Courses, Emploi du temps, Mot de la famille.
+- **Sept widgets par défaut** : Horloge, Météo, Calendrier, Tâches, Courses, Emploi du temps, Mot de la famille.
   Chacun adapte son affichage à sa taille.
+- **Tâches** : ponctuelles ou récurrentes (chaque N jours, semaines, mois ou années), affectées à une ou plusieurs
+  personnes avec roulement automatique. Le widget montre qui doit faire quoi aujourd'hui.
 - **Configuration par widget** dans une modale générée depuis la définition du widget.
 - **Réglages d'écran** : atténuation et anti-rémanence.
 - **Vue téléphone** : mêmes widgets empilés, avec une barre d'onglets (sans mode édition).
@@ -88,6 +90,7 @@ celui qu'il a rejoint en dernier.
 | `lib/boards.ts`, `app/actions.ts` | Lecture et enregistrement côté serveur, contrôle des droits |
 | `lib/auth.ts`, `scripts/user.ts` | Connexion (Better Auth) et gestion des comptes en ligne de commande |
 | `scripts/board.ts` | Ajout et retrait de personnes sur un board en ligne de commande |
+| `lib/tasks.ts` | Récurrence et roulement des tâches (calcul et phrases en clair) |
 | `lib/demo-data.ts` | Données factices |
 
 ## Ajouter un widget
@@ -116,7 +119,13 @@ Un widget qui enregistre des données déclare `storesData: true` et utilise `us
 sa liste d'éléments (un objet JSON par élément, de la forme qu'il veut) et les fonctions `add`, `update` et
 `remove`. Aucune table ni migration à ajouter. Voir `ShoppingWidget.tsx`.
 
-Les personnes du board (nom, couleur, rôle) sont disponibles dans tout widget avec `useBoard().people`.
+Les personnes du board (nom, couleur, rôle) sont disponibles dans tout widget avec `useBoard().people`. Un
+réglage peut proposer ces personnes avec `choices: "people"`.
+
+Un widget dont les données se gèrent dans une grande fenêtre (créer, modifier, supprimer) fournit un composant
+`Manager` : il s'affiche dans la configuration du widget, en mode édition. Voir `TasksWidget.tsx` et
+`TasksManager.tsx`. Pour réserver l'écriture de ses données aux administrateurs, ajouter son type à
+`ADMIN_WRITE_TYPES` dans `app/actions.ts`.
 
 Il suffit ensuite de l'importer dans `components/widgets/index.ts` : il apparaît dans le tiroir d'ajout et
 dans la boutique, avec sa modale de réglages.
@@ -126,10 +135,9 @@ dans la boutique, avec sa modale de réglages.
 1. Plusieurs boards par compte, partage entre membres et administrateurs.
 2. Lien public en lecture seule, vues personnelles, appairage d'un écran mural par code.
 3. Premier vrai connecteur : calendrier (Google Calendar, CalDAV).
-4. Module corvées : rotations de rôles, responsabilités cochables ou non.
-5. Emplois du temps scolaires (Pronote, Ecole Directe), météo réelle.
-6. Plugins communautaires isolés, décrits par un manifeste.
-7. Home Assistant et serveur MCP.
+4. Emplois du temps scolaires (saisie manuelle, Ecole Directe, Pronote), météo réelle.
+5. Plugins communautaires isolés, décrits par un manifeste.
+6. Home Assistant et serveur MCP.
 
 ## Stack
 

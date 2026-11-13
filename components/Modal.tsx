@@ -12,11 +12,13 @@ import Icon from "@/components/Icon";
 export default function Modal({
   title,
   subtitle,
+  size = "normal",
   onClose,
   children,
 }: {
   title: string;
   subtitle?: string;
+  size?: "normal" | "large";
   onClose: () => void;
   children: ReactNode;
 }) {
@@ -30,7 +32,7 @@ export default function Modal({
 
   return createPortal(
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()}>
+      <div className={"modal" + (size === "large" ? " large" : "")} role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <div>
             <h2 className="modal-title">{title}</h2>

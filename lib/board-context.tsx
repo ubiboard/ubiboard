@@ -56,9 +56,13 @@ export function useWidgetData<T extends Record<string, unknown>>(dataId: string)
       if (document.visibilityState === "visible") refresh();
     }, REFRESH_MS);
     window.addEventListener("focus", refresh);
+    // Une autre partie de la page (la fenêtre de gestion, un second widget) a modifié cette liste.
+    const changed = "ubiboard-data:" + dataId;
+    window.addEventListener(changed, refresh);
     return () => {
       clearInterval(timer);
       window.removeEventListener("focus", refresh);
+      window.removeEventListener(changed, refresh);
     };
   }, [refresh]);
 
@@ -73,10 +77,10 @@ export function useWidgetData<T extends Record<string, unknown>>(dataId: string)
         setError("Enregistrement impossible");
       } finally {
         pending.current -= 1;
-        if (pending.current === 0) refresh();
+        if (pending.current === 0) window.dispatchEvent(new Event("ubiboard-data:" + dataId));
       }
     },
-    [refresh]
+    [dataId]
   );
 
   const add = useCallback(
