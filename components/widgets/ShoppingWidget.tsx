@@ -2,29 +2,29 @@
 
 import { useState, type FormEvent } from "react";
 import { registerWidget, rowsFit, type WidgetProps } from "@/lib/widgets";
-import { useStoredState } from "@/lib/hooks";
-import { SHOPPING, type ShoppingItem } from "@/lib/demo-data";
+import { useWidgetData } from "@/lib/board-context";
+import type { DataItem } from "@/lib/board-types";
 import Icon from "@/components/Icon";
 import { ConfirmDialog } from "@/components/Modal";
 
-function Shopping({ bodyHeight, options }: WidgetProps) {
-  const [items, setItems] = useStoredState<ShoppingItem[]>("ubiboard-shopping-v1", SHOPPING);
+/** Forme d'un article dans la liste de données du widget. */
+type Article = { name: string; done: boolean };
+
+function Shopping({ bodyHeight, options, dataId }: WidgetProps) {
+  const { items, loading, error, add, update, remove } = useWidgetData<Article>(dataId);
   const [draft, setDraft] = useState("");
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
-  const [toDelete, setToDelete] = useState<ShoppingItem | null>(null);
+  const [toDelete, setToDelete] = useState<DataItem<Article> | null>(null);
 
   const visible = items
-    .filter((it) => options.done === "show" || !it.done)
+    .filter((it) => options.done === "show" || !it.content.done)
     .slice(0, rowsFit(bodyHeight, 52, 44));
-
-  const toggle = (id: string) =>
-    setItems(items.map((it) => (it.id === id ? { ...it, done: !it.done } : it)));
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const name = draft.trim();
     if (!name) return;
-    setItems([...items, { id: `s${Date.now()}`, name, done: false }]);
+    add({ name, done: false });
     setDraft("");
   };
 
@@ -32,19 +32,22 @@ function Shopping({ bodyHeight, options }: WidgetProps) {
   const commitEdit = () => {
     if (!editing) return;
     const name = editing.text.trim();
-    if (name) setItems(items.map((it) => (it.id === editing.id ? { ...it, name } : it)));
+    const item = items.find((it) => it.id === editing.id);
+    if (name && item && name !== item.content.name) update(item.id, { ...item.content, name });
     setEditing(null);
   };
 
   return (
     <div className="shop">
       <div className="shop-items">
+        {loading && <div className="dim small">Chargement…</div>}
+        {!loading && items.length === 0 && <div className="dim small">La liste est vide.</div>}
         {visible.map((it) => (
           <div key={it.id} className="shop-row">
             {editing?.id === it.id ? (
               <input
                 className="input shop-edit"
-                aria-label={`Modifier ${it.name}`}
+                aria-label={`Modifier ${it.content.name}`}
                 autoFocus
                 value={editing.text}
                 onChange={(e) => setEditing({ id: it.id, text: e.target.value })}
@@ -56,16 +59,20 @@ function Shopping({ bodyHeight, options }: WidgetProps) {
               />
             ) : (
               <>
-                <button className="row-btn" aria-pressed={it.done} onClick={() => toggle(it.id)}>
-                  <span className={"check" + (it.done ? " on" : "")}>
-                    {it.done && <Icon name="check" size={14} strokeWidth={3} color="var(--accent-ink)" />}
+                <button
+                  className="row-btn"
+                  aria-pressed={it.content.done}
+                  onClick={() => update(it.id, { ...it.content, done: !it.content.done })}
+                >
+                  <span className={"check" + (it.content.done ? " on" : "")}>
+                    {it.content.done && <Icon name="check" size={14} strokeWidth={3} color="var(--accent-ink)" />}
                   </span>
-                  <span className={"ellipsis" + (it.done ? " struck" : "")}>{it.name}</span>
+                  <span className={"ellipsis" + (it.content.done ? " struck" : "")}>{it.content.name}</span>
                 </button>
-                <button className="row-action" aria-label={`Modifier ${it.name}`} title="Modifier" onClick={() => setEditing({ id: it.id, text: it.name })}>
+                <button className="row-action" aria-label={`Modifier ${it.content.name}`} title="Modifier" onClick={() => setEditing({ id: it.id, text: it.content.name })}>
                   <Icon name="pencil" size={16} />
                 </button>
-                <button className="row-action" aria-label={`Supprimer ${it.name}`} title="Supprimer" onClick={() => setToDelete(it)}>
+                <button className="row-action" aria-label={`Supprimer ${it.content.name}`} title="Supprimer" onClick={() => setToDelete(it)}>
                   <Icon name="close" size={16} />
                 </button>
               </>
@@ -73,11 +80,13 @@ function Shopping({ bodyHeight, options }: WidgetProps) {
           </div>
         ))}
       </div>
+      {error && <div className="widget-error">{error}</div>}
       <form className="shop-form" onSubmit={submit}>
         <input
           className="input"
           aria-label="Ajouter un article"
           placeholder="Ajouter un article"
+          maxLength={200}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
         />
@@ -87,12 +96,12 @@ function Shopping({ bodyHeight, options }: WidgetProps) {
       </form>
       {toDelete && (
         <ConfirmDialog
-          title={`Supprimer « ${toDelete.name} » ?`}
+          title={`Supprimer « ${toDelete.content.name} » ?`}
           message="L’article sera retiré de la liste de courses."
           confirmLabel="Supprimer"
           onCancel={() => setToDelete(null)}
           onConfirm={() => {
-            setItems(items.filter((it) => it.id !== toDelete.id));
+            remove(toDelete.id);
             setToDelete(null);
           }}
         />
@@ -107,6 +116,7 @@ registerWidget({
   description: "Liste partagée, avec ajout rapide.",
   source: "default",
   access: "liste de courses (lecture, écriture)",
+  storesData: true,
   sizes: { min: [2, 2], default: [2, 3], max: [4, 5] },
   options: [
     {

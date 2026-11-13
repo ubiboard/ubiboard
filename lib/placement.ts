@@ -1,6 +1,6 @@
 import { type Compactor, type Layout, type LayoutItem } from "react-grid-layout";
 
-export type Cell = { i: string; x: number; y: number; w: number; h: number };
+type Cell = { i: string; x: number; y: number; w: number; h: number };
 
 /** Le widget en cours de déplacement/redimensionnement et la disposition au moment où le geste a commencé. */
 export type MoveSession = { id: string; origin: Cell[] };

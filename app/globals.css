@@ -114,6 +114,10 @@ button {
   padding: 0 16px;
 }
 .input::placeholder { color: var(--dim); }
+.input.block { display: block; width: 100%; height: 48px; border-radius: 24px; font-size: 16px; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.save-error { color: #ff9b8a; font-size: 14px; }
+.widget-error { flex: none; color: #ff9b8a; font-size: 13px; margin-top: 6px; }
 
 /* Dans un widget (contenu rogné), le contour de focus se dessine vers l'intérieur. */
 .widget .input:focus-visible,
@@ -599,9 +603,29 @@ button {
   padding: 0;
 }
 
+.empty.static { position: static; height: 200px; padding: 24px; text-align: center; }
+
+/* ---------- Connexion ---------- */
+
+.login { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: 28px;
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.login-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+.login-brand .brand { font-size: 26px; }
+label.field-label { display: block; }
+
 /* ---------- Vue téléphone ---------- */
 
-.phone-head { padding: 20px 20px 12px; }
+.phone-head { padding: 20px 20px 12px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .phone-title { margin: 2px 0 0; font-family: var(--font-head); font-size: 28px; font-weight: 500; }
 .phone-grid {
   display: grid;

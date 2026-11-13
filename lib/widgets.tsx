@@ -26,6 +26,8 @@ export type WidgetProps = {
   /** Hauteur utile en pixels (hors marges et titre), pour savoir combien de lignes afficher. */
   bodyHeight: number;
   options: WidgetOptions;
+  /** Identifiant de la liste de données du widget (voir useWidgetData). */
+  dataId: string;
 };
 
 export type WidgetDefinition = {
@@ -36,6 +38,11 @@ export type WidgetDefinition = {
   source: "default" | "community";
   /** Ce à quoi le widget accède, affiché dans la boutique. */
   access: string;
+  /**
+   * Le widget enregistre-t-il des données (liste, note…) ? Si oui, le supprimer
+   * supprime ces données : une confirmation est alors demandée.
+   */
+  storesData?: boolean;
   /** Tailles en cases de grille : [colonnes, lignes]. */
   sizes: {
     min: [number, number];

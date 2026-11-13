@@ -95,17 +95,3 @@ export const CHORES: { name: string; who: string }[] = [
   { name: "Débarrasser le lave-vaisselle", who: "Léo" },
   { name: "Ranger le linge", who: "Camille" },
 ];
-
-export type ShoppingItem = { id: string; name: string; done: boolean };
-
-export const SHOPPING: ShoppingItem[] = [
-  { id: "s1", name: "Lait", done: false },
-  { id: "s2", name: "Pain", done: true },
-  { id: "s3", name: "Pâtes", done: false },
-  { id: "s4", name: "Pommes", done: false },
-  { id: "s5", name: "Yaourts", done: false },
-  { id: "s6", name: "Café", done: false },
-  { id: "s7", name: "Liquide vaisselle", done: false },
-];
-
-export const NOTE = "Judo de Léo à 17 h 30 : penser au kimono !";
