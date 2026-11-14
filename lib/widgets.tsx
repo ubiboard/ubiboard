@@ -27,6 +27,13 @@ export type ManagerProps = {
 
 export type WidgetOptions = Record<string, string>;
 
+/** Ce que reçoit le composant de réglages propre à un widget. */
+export type SettingsProps = {
+  options: WidgetOptions;
+  /** Change un ou plusieurs réglages dans le brouillon du mode édition. */
+  setOptions: (patch: WidgetOptions) => void;
+};
+
 /** Ce que reçoit le composant d'un widget. */
 export type WidgetProps = {
   /** Largeur et hauteur en cases de grille. */
@@ -75,6 +82,11 @@ export type WidgetDefinition = {
   /** Titre affiché en haut du widget (peut dépendre des réglages). */
   title: (options: WidgetOptions, people: Person[]) => string;
   Component: ComponentType<WidgetProps>;
+  /**
+   * Réglages qui ne se résument pas à une liste de choix (une ville à chercher…),
+   * affichés dans la configuration du widget. Enregistrés avec la disposition.
+   */
+  Settings?: ComponentType<SettingsProps>;
   /**
    * Fenêtre de gestion des données du widget (créer, modifier, supprimer),
    * affichée en grand dans sa configuration, en mode édition.

@@ -10,7 +10,7 @@ import { BoardProvider, WidgetActionsContext, useBoard } from "@/lib/board-conte
 import { GRID_COLS, PERSON_COLORS, type BoardRole, type BoardState, type Person, type PlacedWidget } from "@/lib/board-types";
 import { createPushCompactor, type MoveSession } from "@/lib/placement";
 import { getWidget, listWidgets } from "@/lib/widgets";
-import { DAYS, MONTHS } from "@/lib/demo-data";
+import { DAYS, MONTHS } from "@/lib/dates";
 import Icon, { type IconName } from "@/components/Icon";
 import Modal, { ConfirmDialog, Switch } from "@/components/Modal";
 import "@/components/widgets"; // enregistre les widgets par défaut
@@ -132,7 +132,9 @@ export default function Board({
   // Widget en cours de déplacement ou de redimensionnement, avec sa taille en direct.
   const [active, setActive] = useState<{ id: string; w: number; h: number } | null>(null);
 
-  const { width, containerRef, mounted } = useContainerWidth();
+  // Les widgets ne sont affichés qu'une fois la largeur mesurée, donc jamais par le serveur :
+  // leur contenu dépend de l'heure et du fuseau de l'appareil, que le serveur ne connaît pas.
+  const { width, containerRef, mounted } = useContainerWidth({ measureBeforeMount: true });
   const rowHeight = useRowHeight();
   const phone = useIsPhone();
 
@@ -509,6 +511,12 @@ export default function Board({
                 onChange={(e) => patchWidget(configWidget.id, { title: e.target.value || null })}
               />
             </div>
+            {configDef.Settings && (
+              <configDef.Settings
+                options={configWidget.options}
+                setOptions={(patch) => patchWidget(configWidget.id, { options: { ...configWidget.options, ...patch } })}
+              />
+            )}
             {configDef.options.map((opt) => {
               const stored = configWidget.options[opt.key];
               const byPerson = opt.choices === "people";
@@ -609,7 +617,7 @@ export default function Board({
             <div className="info-box">
               <span className="strong">Noir pur sur tout l’écran</span>
               <span className="muted small">
-                Le fond est #000 : sur un écran OLED, un pixel noir est éteint et ne consomme rien. Les widgets
+                Le fond de l’écran et celui des widgets sont #000 : sur un écran OLED, un pixel noir est éteint et ne consomme rien. Les widgets
                 n’allument que leurs contenus.
               </span>
             </div>

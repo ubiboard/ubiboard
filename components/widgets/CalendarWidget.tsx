@@ -5,7 +5,7 @@ import { registerWidget, rowsFit, type WidgetProps } from "@/lib/widgets";
 import { HeaderActions, useWidgetData } from "@/lib/board-context";
 import { useCalendarEvents } from "@/lib/use-calendar-events";
 import { useNow } from "@/lib/hooks";
-import { DAYS, DAYS_SHORT, MONTHS } from "@/lib/demo-data";
+import { DAYS, DAYS_SHORT, MONTHS } from "@/lib/dates";
 import {
   CALENDAR_VIEWS,
   addDays,

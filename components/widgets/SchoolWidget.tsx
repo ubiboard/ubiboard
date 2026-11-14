@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { registerWidget, type WidgetProps } from "@/lib/widgets";
 import { HeaderActions, useWidgetData } from "@/lib/board-context";
 import { useNow } from "@/lib/hooks";
-import { DAYS_SHORT } from "@/lib/demo-data";
+import { DAYS_SHORT } from "@/lib/dates";
 import { addDays, isOnDay, startOfDay } from "@/lib/calendar";
 import { useCalendarEvents } from "@/lib/use-calendar-events";
 import {

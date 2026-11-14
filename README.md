@@ -4,8 +4,7 @@ Hub familial open source, web et auto-hébergeable : un écran d'accueil façon 
 redimensionnables et configurables, pensé pour un écran mural tactile mais accessible aussi depuis un PC,
 une tablette ou un téléphone.
 
-> Projet à ses débuts. Le calendrier, les tâches, l'emploi du temps, la liste de courses et le mot de la
-> famille sont réels ; seule la météo affiche encore des **données factices**.
+> Projet à ses débuts : tous les widgets affichent des données réelles.
 
 ## Ce qui fonctionne
 
@@ -17,6 +16,9 @@ une tablette ou un téléphone.
     cliqué **Enregistrer** ; **Annuler** jette le brouillon.
 - **Six widgets par défaut** : Horloge et météo, Calendrier, Tâches, Courses, Emploi du temps, Mot de la famille.
   Chacun adapte son affichage à sa taille.
+- **Horloge et météo** : l'heure, la date, la météo du moment et jusqu'à sept jours de prévisions pour la ville
+  choisie dans les réglages. Données [Open-Meteo](https://open-meteo.com) (CC BY 4.0), lues par le navigateur,
+  sans clé ni compte.
 - **Tâches** : ponctuelles ou récurrentes (chaque N jours, semaines, mois ou années), affectées à une ou plusieurs
   personnes avec roulement automatique. Le widget montre qui doit faire quoi aujourd'hui.
 - **Calendrier** : un ou plusieurs agendas connectés par leur lien iCal (Google Agenda, Outlook, iCloud,
@@ -102,7 +104,8 @@ celui qu'il a rejoint en dernier.
 | `lib/timetable.ts` | Créneaux de l'emploi du temps et calcul de leur position |
 | `lib/calendar.ts`, `lib/calendar-server.ts` | Calendrier : types et dates ; lecture et dépliage des agendas iCal côté serveur |
 | `lib/data-policy.ts`, `lib/crypto.ts` | Règles par type de widget (écriture réservée, champs secrets) et chiffrement des secrets |
-| `lib/demo-data.ts` | Données factices |
+| `lib/weather.ts` | Météo : lecture d'Open-Meteo, recherche de ville, codes météo |
+| `lib/dates.ts`, `lib/hooks.ts` | Noms des jours et des mois ; heure courante, taille d'un élément, météo |
 
 ## Ajouter un widget
 
@@ -144,6 +147,10 @@ déclare `headerActions: true` et les enveloppe dans `<HeaderActions>`.
 Un réglage que tout membre peut changer depuis le widget passe par `setOption` et doit être déclaré dans
 `USAGE_OPTIONS` (`app/actions.ts`).
 
+Un réglage qui n'est pas une liste de choix (une ville à chercher, par exemple) se fait dans un composant
+`Settings`, qui reçoit `options` et `setOptions`. Voir `ClockWidget.tsx`. Un widget dont l'affichage dépend de sa
+taille en pixels peut la mesurer avec `useSize` (`lib/hooks.ts`).
+
 Il suffit ensuite de l'importer dans `components/widgets/index.ts` : il apparaît dans le tiroir d'ajout et
 dans la boutique, avec sa modale de réglages.
 
@@ -151,7 +158,7 @@ dans la boutique, avec sa modale de réglages.
 
 1. Plusieurs boards par compte, partage entre membres et administrateurs.
 2. Lien public en lecture seule, vues personnelles, appairage d'un écran mural par code.
-3. Météo réelle ; synchronisation Pronote.
+3. Synchronisation Pronote.
 4. Rappels et alertes.
 5. Plugins communautaires isolés, décrits par un manifeste.
 6. Home Assistant et serveur MCP.
