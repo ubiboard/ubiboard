@@ -4,7 +4,7 @@ import { and, asc, count, eq, isNull, notInArray, sql } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { getRole, loadBoardView } from "@/lib/boards";
 import { db, schema } from "@/lib/db";
-import { GRID_COLS, PERSON_COLORS, type BoardRole, type BoardState, type DataItem } from "@/lib/board-types";
+import { PERSON_COLORS, normalizeScreen, type BoardRole, type BoardState, type DataItem } from "@/lib/board-types";
 import type { CalendarResult } from "@/lib/calendar";
 import { CalendarError, loadCalendarEvents } from "@/lib/calendar-server";
 import { decryptSecret } from "@/lib/crypto";
@@ -38,6 +38,7 @@ export async function saveBoardView(boardId: string, state: BoardState): Promise
   await requireRole(boardId, "admin");
 
   if (!Array.isArray(state?.widgets) || state.widgets.length > MAX_WIDGETS) throw new Error("Vue invalide.");
+  const screen = normalizeScreen(state.screen);
   const rows = state.widgets.map((w) => {
     const cell = state.layout.find((l) => l.i === w.id);
     const optionsOk =
@@ -49,9 +50,9 @@ export async function saveBoardView(boardId: string, state: BoardState): Promise
       typeof w.type !== "string" ||
       w.type.length > 60 ||
       !optionsOk ||
-      !isInt(cell.w, 1, GRID_COLS) ||
+      !isInt(cell.w, 1, screen.cols) ||
       !isInt(cell.h, 1, 20) ||
-      !isInt(cell.x, 0, GRID_COLS - cell.w) ||
+      !isInt(cell.x, 0, screen.cols - cell.w) ||
       !isInt(cell.y, 0, 500)
     ) {
       throw new Error("Vue invalide.");
@@ -82,7 +83,7 @@ export async function saveBoardView(boardId: string, state: BoardState): Promise
     if (rows.length > 0) await tx.insert(widget).values(rows.map((r) => ({ ...r, viewId: boardView.id })));
     await tx
       .update(view)
-      .set({ settings: { dim: !!state.screen?.dim, drift: !!state.screen?.drift }, updatedAt: new Date() })
+      .set({ settings: screen, updatedAt: new Date() })
       .where(eq(view.id, boardView.id));
 
     // Une liste disparaît avec le dernier widget qui l'affiche, toutes vues confondues.

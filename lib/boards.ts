@@ -2,7 +2,7 @@ import "server-only";
 import { randomBytes, randomUUID } from "node:crypto";
 import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import { PERSON_COLORS, type BoardRole, type BoardState, type Person } from "@/lib/board-types";
+import { PERSON_COLORS, normalizeScreen, type BoardRole, type BoardState, type Person } from "@/lib/board-types";
 
 const { board, boardMember, view, widget, user } = schema;
 
@@ -37,7 +37,7 @@ async function createBoardIn(tx: Tx, userId: string, name: string): Promise<Boar
   await tx.insert(boardMember).values({ boardId: created.id, userId, role: "admin" });
   const [boardView] = await tx
     .insert(view)
-    .values({ boardId: created.id, userId: null, settings: { dim: false, drift: true } })
+    .values({ boardId: created.id, userId: null, settings: normalizeScreen({ drift: true }) })
     .returning({ id: view.id });
   await tx
     .insert(widget)
@@ -97,7 +97,7 @@ export async function loadBoardView(boardId: string): Promise<BoardState> {
     .select()
     .from(view)
     .where(and(eq(view.boardId, boardId), isNull(view.userId)));
-  if (!boardView) return { widgets: [], layout: [], screen: { dim: false, drift: true } };
+  if (!boardView) return { widgets: [], layout: [], screen: normalizeScreen({ drift: true }) };
 
   const rows = await db.select().from(widget).where(eq(widget.viewId, boardView.id)).orderBy(asc(widget.y), asc(widget.x));
   return {
@@ -110,6 +110,6 @@ export async function loadBoardView(boardId: string): Promise<BoardState> {
       dataId: r.dataId,
     })),
     layout: rows.map((r) => ({ i: r.id, x: r.x, y: r.y, w: r.w, h: r.h })),
-    screen: boardView.settings,
+    screen: normalizeScreen(boardView.settings),
   };
 }

@@ -9,6 +9,27 @@ const overlaps = (a: Cell, b: Cell) =>
   a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 
 /**
+ * Fait tenir la disposition dans ce nombre de colonnes : un widget trop large
+ * est rétréci, un widget qui dépasse est ramené dans la grille, et ceux qui se
+ * retrouvent l'un sur l'autre sont poussés vers le bas.
+ */
+export function fitToColumns(layout: Cell[], cols: number): Cell[] {
+  const placed: Cell[] = [];
+  for (const origin of [...layout].sort((a, b) => a.y - b.y || a.x - b.x)) {
+    const w = Math.min(origin.w, cols);
+    const cell = { ...origin, w, x: Math.min(origin.x, cols - w) };
+    for (;;) {
+      const blockers = placed.filter((p) => overlaps(p, cell));
+      if (blockers.length === 0) break;
+      cell.y = Math.max(...blockers.map((p) => p.y + p.h));
+    }
+    placed.push(cell);
+  }
+  // On garde l'ordre d'origine : seules les positions changent.
+  return layout.map((cell) => placed.find((p) => p.i === cell.i) ?? cell);
+}
+
+/**
  * Placement libre avec gestion des collisions.
  *
  * Hors geste : rien ne bouge, les trous sont permis.

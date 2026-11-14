@@ -7,29 +7,38 @@ import GridLayout, { useContainerWidth, type EventCallback, type Layout, type La
 import { countItems, getBoardView, saveBoardView, setPersonColor, setWidgetOption } from "@/app/actions";
 import { authClient } from "@/lib/auth-client";
 import { BoardProvider, WidgetActionsContext, useBoard } from "@/lib/board-context";
-import { GRID_COLS, PERSON_COLORS, type BoardRole, type BoardState, type Person, type PlacedWidget } from "@/lib/board-types";
-import { createPushCompactor, type MoveSession } from "@/lib/placement";
+import { GRID_DEFAULT, GRID_LIMITS, PERSON_COLORS, type BoardRole, type BoardState, type Density, type Person, type PlacedWidget } from "@/lib/board-types";
+import { createPushCompactor, fitToColumns, type MoveSession } from "@/lib/placement";
 import { getWidget, listWidgets } from "@/lib/widgets";
 import { DAYS, MONTHS } from "@/lib/dates";
 import Icon, { type IconName } from "@/components/Icon";
 import Modal, { ConfirmDialog, Switch } from "@/components/Modal";
 import "@/components/widgets"; // enregistre les widgets par défaut
 
-const COLS = GRID_COLS;
-const ROWS = 5; // lignes visibles sans défilement sur l'écran mural
-const GAP = 10;
+/**
+ * Les trois densités : espace entre les widgets, marge sous la grille, et
+ * hauteur prise par le cadre d'un widget (marges intérieures et contour).
+ * Les valeurs en pixels correspondantes sont dans globals.css (.density-…).
+ */
+const DENSITY: Record<Density, { label: string; gap: number; bottom: number; frame: number }> = {
+  roomy: { label: "Aérée", gap: 16, bottom: 16, frame: 38 },
+  normal: { label: "Normale", gap: 10, bottom: 10, frame: 22 },
+  compact: { label: "Compacte", gap: 0, bottom: 0, frame: 17 },
+};
+const GRID_PRESETS: [number, number][] = [[12, 5], [12, 6], [16, 9]];
 const HEADER = 36; // bandeau réduit
 const PHONE_QUERY = "(max-width: 760px)";
 
-function useRowHeight(): number {
+/** Hauteur d'une ligne, pour que le nombre de lignes choisi remplisse l'écran. */
+function useRowHeight(rows: number, gap: number, bottom: number): number {
   const [rowHeight, setRowHeight] = useState(146);
   useEffect(() => {
     const compute = () =>
-      setRowHeight(Math.max(110, Math.floor((window.innerHeight - HEADER - GAP - (ROWS - 1) * GAP) / ROWS)));
+      setRowHeight(Math.max(48, Math.floor((window.innerHeight - HEADER - bottom - (rows - 1) * gap) / rows)));
     compute();
     window.addEventListener("resize", compute);
     return () => window.removeEventListener("resize", compute);
-  }, []);
+  }, [rows, gap, bottom]);
   return rowHeight;
 }
 
@@ -57,12 +66,15 @@ function WidgetFrame({
   w,
   h,
   height,
+  frame = 22,
 }: {
   widget: PlacedWidget;
   w: number;
   h: number;
   /** Hauteur totale en pixels du cadre. */
   height: number;
+  /** Hauteur prise par les marges intérieures et le contour (dépend de la densité). */
+  frame?: number;
 }) {
   const { people, setWidgetOption: setOptionOf } = useBoard();
   // L'emplacement des boutons d'en-tête, rempli par le widget via <HeaderActions>.
@@ -73,7 +85,7 @@ function WidgetFrame({
   // L'en-tête existe s'il y a un titre ou des boutons ; il est plus haut avec des boutons.
   const hasHead = widget.showTitle || !!def.headerActions;
   const headHeight = !hasHead ? 0 : def.headerActions ? 36 : 22;
-  const bodyHeight = height - 22 - headHeight;
+  const bodyHeight = height - frame - headHeight;
   return (
     <section className="widget" aria-label={title}>
       {hasHead && (
@@ -135,11 +147,14 @@ export default function Board({
   // Les widgets ne sont affichés qu'une fois la largeur mesurée, donc jamais par le serveur :
   // leur contenu dépend de l'heure et du fuseau de l'appareil, que le serveur ne connaît pas.
   const { width, containerRef, mounted } = useContainerWidth({ measureBeforeMount: true });
-  const rowHeight = useRowHeight();
   const phone = useIsPhone();
 
   const isPhone = mounted && phone;
   const state = editing ? draft : saved;
+  const { cols, rows } = state.screen;
+  const density = DENSITY[state.screen.density];
+  const gap = density.gap;
+  const rowHeight = useRowHeight(rows, gap, density.bottom);
   /** Relit la vue enregistrée : un autre appareil a pu changer un réglage ou la disposition. */
   const refreshView = useCallback(async () => {
     try {
@@ -301,7 +316,7 @@ export default function Board({
     const def = getWidget(type);
     if (!def) return;
     const id = crypto.randomUUID();
-    const [w, h] = def.sizes.default;
+    const [defaultW, h] = def.sizes.default;
     setDraft((prev) => ({
       ...prev,
       widgets: [
@@ -310,13 +325,21 @@ export default function Board({
         { id, type, showTitle: def.defaultShowTitle, title: null, options: { ...def.defaultOptions }, dataId: crypto.randomUUID() },
       ],
       // Placement libre : le nouveau widget arrive sous les autres.
-      layout: [...prev.layout, { i: id, x: 0, y: Math.max(0, ...prev.layout.map((l) => l.y + l.h)), w, h }],
+      layout: [
+        ...prev.layout,
+        { i: id, x: 0, y: Math.max(0, ...prev.layout.map((l) => l.y + l.h)), w: Math.min(defaultW, prev.screen.cols), h },
+      ],
     }));
     setDrawerOpen(false);
   };
 
   const setScreen = (patch: Partial<BoardState["screen"]>) =>
-    setDraft((prev) => ({ ...prev, screen: { ...prev.screen, ...patch } }));
+    setDraft((prev) => {
+      const screen = { ...prev.screen, ...patch };
+      // Avec moins de colonnes, les widgets qui dépassent sont ramenés dans la grille.
+      const layout = screen.cols < prev.screen.cols ? fitToColumns(prev.layout, screen.cols) : prev.layout;
+      return { ...prev, screen, layout };
+    });
 
   // Les contraintes de taille viennent de la définition du widget.
   const gridLayout: LayoutItem[] = useMemo(
@@ -328,22 +351,23 @@ export default function Board({
           ...cell,
           minW: Math.min(def.sizes.min[0], cell.w),
           minH: Math.min(def.sizes.min[1], cell.h),
-          maxW: def.sizes.max[0],
-          maxH: def.sizes.max[1],
+          // Les tailles maximales sont déclarées pour la grille par défaut : on les met à l'échelle.
+          maxW: Math.min(cols, Math.max(cell.w, Math.ceil((def.sizes.max[0] * cols) / GRID_DEFAULT.cols))),
+          maxH: Math.max(cell.h, Math.ceil((def.sizes.max[1] * rows) / GRID_DEFAULT.rows)),
         };
       }),
-    [state.layout, state.widgets]
+    [state.layout, state.widgets, cols, rows]
   );
 
   // Nombre de lignes du quadrillage affiché pendant un déplacement.
-  const guideRows = Math.max(ROWS, ...state.layout.map((l) => l.y + l.h)) + 1;
+  const guideRows = Math.max(rows, ...state.layout.map((l) => l.y + l.h)) + 1;
 
   const configWidget = editing ? draft.widgets.find((w) => w.id === configId) : undefined;
   const configDef = configWidget ? getWidget(configWidget.type) : undefined;
 
   return (
     <BoardProvider value={boardInfo}>
-      <div className={"board" + (isPhone ? " phone" : "")}>
+      <div className={"board" + (isPhone ? " phone" : ` density-${state.screen.density}`)}>
         {!isPhone && (
           <header className="topbar">
             <div className="topbar-left">
@@ -410,9 +434,9 @@ export default function Board({
             <div
               className="grid-guide"
               aria-hidden="true"
-              style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))`, gridAutoRows: rowHeight, gap: GAP }}
+              style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridAutoRows: rowHeight, gap }}
             >
-              {Array.from({ length: COLS * guideRows }, (_, k) => (
+              {Array.from({ length: cols * guideRows }, (_, k) => (
                 <div key={k} className="grid-guide-cell" />
               ))}
             </div>
@@ -422,7 +446,7 @@ export default function Board({
             <GridLayout
               width={width}
               layout={gridLayout}
-              gridConfig={{ cols: COLS, rowHeight, margin: [GAP, GAP], containerPadding: [0, 0] }}
+              gridConfig={{ cols, rowHeight, margin: [gap, gap], containerPadding: [0, 0] }}
               dragConfig={{ enabled: editing, handle: ".drag-handle" }}
               resizeConfig={{
                 enabled: editing,
@@ -452,7 +476,8 @@ export default function Board({
                       widget={widget}
                       w={size.w}
                       h={size.h}
-                      height={size.h * rowHeight + (size.h - 1) * GAP}
+                      height={size.h * rowHeight + (size.h - 1) * gap}
+                      frame={density.frame}
                     />
                     {editing && (
                       <>
@@ -614,6 +639,43 @@ export default function Board({
 
         {editing && screenOpen && (
           <Modal title="Écran" onClose={() => setScreenOpen(false)}>
+            <div>
+              <div className="field-label">Grille</div>
+              <div className="grid-size">
+                <Stepper label="Colonnes" value={draft.screen.cols} range={GRID_LIMITS.cols} onChange={(n) => setScreen({ cols: n })} />
+                <Stepper label="Lignes" value={draft.screen.rows} range={GRID_LIMITS.rows} onChange={(n) => setScreen({ rows: n })} />
+              </div>
+              <div className="chips grid-presets">
+                {GRID_PRESETS.map(([c, r]) => {
+                  const on = draft.screen.cols === c && draft.screen.rows === r;
+                  return (
+                    <button key={`${c}x${r}`} className={"chip" + (on ? " on" : "")} aria-pressed={on} onClick={() => setScreen({ cols: c, rows: r })}>
+                      {c} × {r}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="muted small grid-note">
+                Les lignes sont celles visibles sans défilement. Avec moins de colonnes, les widgets qui dépassent
+                sont déplacés ; « Annuler » rétablit la disposition.
+              </div>
+            </div>
+            <div>
+              <div className="field-label">Densité</div>
+              <div className="chips">
+                {(Object.keys(DENSITY) as Density[]).map((key) => {
+                  const on = draft.screen.density === key;
+                  return (
+                    <button key={key} className={"chip" + (on ? " on" : "")} aria-pressed={on} onClick={() => setScreen({ density: key })}>
+                      {DENSITY[key].label}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="muted small grid-note">
+                Compacte : aucune marge, les widgets se touchent et ne sont séparés que par un filet.
+              </div>
+            </div>
             <div className="info-box">
               <span className="strong">Noir pur sur tout l’écran</span>
               <span className="muted small">
@@ -681,6 +743,32 @@ export default function Board({
   );
 }
 
+/** Un nombre à régler avec les boutons « moins » et « plus ». */
+function Stepper({
+  label,
+  value,
+  range,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  range: { min: number; max: number };
+  onChange: (next: number) => void;
+}) {
+  return (
+    <div className="stepper">
+      <span className="stepper-label">{label}</span>
+      <button className="btn-icon" aria-label={`Moins de ${label.toLowerCase()}`} disabled={value <= range.min} onClick={() => onChange(value - 1)}>
+        <Icon name="minus" size={18} />
+      </button>
+      <span className="stepper-value" aria-live="polite">{value}</span>
+      <button className="btn-icon" aria-label={`Plus de ${label.toLowerCase()}`} disabled={value >= range.max} onClick={() => onChange(value + 1)}>
+        <Icon name="plus" size={18} />
+      </button>
+    </div>
+  );
+}
+
 /* ---------- Vue téléphone : widgets empilés + onglets, sans mode édition ---------- */
 
 const TABS: { key: string; label: string; icon: IconName; type?: string }[] = [
@@ -728,7 +816,7 @@ function PhoneView({
       <div className="phone-grid">
         {ordered.map((widget) => {
           const cell = state.layout.find((l) => l.i === widget.id);
-          const small = !!cell && cell.h === 1 && cell.w <= 3;
+          const small = !!cell && cell.h === 1 && cell.w <= state.screen.cols / 4;
           return (
             <div key={widget.id} className={small ? "phone-half" : "phone-wide"}>
               <WidgetFrame

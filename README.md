@@ -8,7 +8,7 @@ une tablette ou un téléphone.
 
 ## Ce qui fonctionne
 
-- **Écran d'accueil** sur une grille de 12 colonnes, en noir pur (pensé pour l'OLED).
+- **Écran d'accueil** sur une grille réglable (12 colonnes sur 5 lignes par défaut), en noir pur (pensé pour l'OLED).
 - **Deux modes** :
   - *lecture* : rien ne bouge, seuls les contenus sont interactifs (cocher un article, écrire un mot) ;
   - *édition* (bouton crayon) : placement libre des widgets par glisser-déposer, redimensionnement par le
@@ -28,7 +28,8 @@ une tablette ou un téléphone.
   et/ou des cours synchronisés par un lien iCal (celui que fournit Ecole Directe, par exemple).
   Les créneaux à la même heure sont alignés d'un jour à l'autre, et les trous communs sont réduits.
 - **Configuration par widget** dans une modale générée depuis la définition du widget.
-- **Réglages d'écran** : atténuation et anti-rémanence.
+- **Réglages d'écran** : taille de la grille (colonnes et lignes), densité (aérée, normale, compacte), atténuation
+  et anti-rémanence.
 - **Vue téléphone** : mêmes widgets empilés, avec une barre d'onglets (sans mode édition).
 - **Boutique de plugins** (`/boutique`) : vitrine statique et format de manifeste proposé.
 - **Comptes et connexion** : un compte par personne, sans inscription publique (comptes créés en ligne de
@@ -118,7 +119,7 @@ registerWidget({
   description: "Ce qu'il affiche.",
   source: "default",
   access: "aucun",
-  sizes: { min: [3, 1], default: [3, 2], max: [6, 3] }, // [colonnes sur 12, lignes]
+  sizes: { min: [3, 1], default: [3, 2], max: [6, 3] }, // [colonnes, lignes] pour la grille par défaut, 12 × 5
   options: [
     { key: "mode", label: "Mode", choices: [{ value: "a", label: "A" }, { value: "b", label: "B" }] },
   ],

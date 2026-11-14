@@ -11,6 +11,7 @@ import {
   unique,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { ScreenSettings } from "../board-types";
 
 /* ------------------------------------------------------------------ */
 /* Comptes : tables attendues par Better Auth (ne pas renommer).       */
@@ -104,7 +105,8 @@ export const boardMember = pgTable(
   (t) => [primaryKey({ columns: [t.boardId, t.userId] }), index("board_member_user_idx").on(t.userId)]
 );
 
-export type ViewSettings = { dim: boolean; drift: boolean };
+/** Les vues enregistrées avant l'ajout d'un réglage ne l'ont pas : voir normalizeScreen. */
+export type ViewSettings = Partial<ScreenSettings>;
 
 /**
  * Une disposition de widgets. `userId` vide = la vue du board (une seule) ;

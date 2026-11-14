@@ -16,7 +16,37 @@ export type PlacedWidget = {
   dataId: string;
 };
 
-export type ScreenSettings = { dim: boolean; drift: boolean };
+/** Espace autour des widgets : aéré, normal, ou compact (les widgets se touchent). */
+export type Density = "roomy" | "normal" | "compact";
+export const DENSITIES: Density[] = ["roomy", "normal", "compact"];
+
+/** Réglages d'écran d'une vue : atténuation, anti-rémanence, taille de la grille et densité. */
+export type ScreenSettings = {
+  dim: boolean;
+  drift: boolean;
+  /** Nombre de colonnes de la grille. */
+  cols: number;
+  /** Nombre de lignes visibles sans défilement. */
+  rows: number;
+  density: Density;
+};
+
+export const GRID_DEFAULT = { cols: 12, rows: 5 };
+export const GRID_LIMITS = { cols: { min: 4, max: 24 }, rows: { min: 3, max: 16 } };
+
+const intIn = (value: unknown, range: { min: number; max: number }, fallback: number) =>
+  typeof value === "number" && Number.isInteger(value) && value >= range.min && value <= range.max ? value : fallback;
+
+/** Réglages d'écran complets et valides, quelle que soit la forme reçue (ancienne vue, saisie…). */
+export function normalizeScreen(raw: Partial<ScreenSettings> | null | undefined): ScreenSettings {
+  return {
+    dim: !!raw?.dim,
+    drift: !!raw?.drift,
+    cols: intIn(raw?.cols, GRID_LIMITS.cols, GRID_DEFAULT.cols),
+    rows: intIn(raw?.rows, GRID_LIMITS.rows, GRID_DEFAULT.rows),
+    density: DENSITIES.includes(raw?.density as Density) ? (raw?.density as Density) : "normal",
+  };
+}
 
 /** Une vue : les widgets, leur placement et les réglages d'écran. */
 export type BoardState = {
@@ -42,5 +72,3 @@ export const PERSON_COLORS = [
   "#8FDDE3",
   "#C9C9D1",
 ];
-
-export const GRID_COLS = 12;

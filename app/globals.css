@@ -183,7 +183,15 @@ button {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  /* Densité normale. Les mêmes valeurs sont dans DENSITY (Board.tsx). */
+  --outer: 0 10px 10px;
+  --pad: 10px 12px;
+  --radius: 16px;
 }
+.board.density-roomy { --outer: 0 32px 16px; --pad: 18px 20px; }
+/* Compacte : les widgets se touchent ; un seul filet les sépare, à droite et en bas. */
+.board.density-compact { --outer: 0; --pad: 8px 10px; --radius: 0px; }
+.board.density-compact .widget { border-width: 0 1px 1px 0; }
 
 /* Bandeau réduit : une fine ligne en lecture, qui s'agrandit en mode édition. */
 .topbar {
@@ -220,7 +228,7 @@ button {
 
 .board-area {
   flex: 1;
-  margin: 0 10px 10px;
+  margin: var(--outer);
   position: relative;
 }
 .board.phone .board-area { margin: 0; }
@@ -261,10 +269,10 @@ button {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  padding: 10px 12px;
+  padding: var(--pad, 10px 12px);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: var(--radius, 16px);
 }
 /* En-tête : le titre à gauche, les boutons du widget à droite. */
 .widget-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 16px; margin-bottom: 6px; }
@@ -299,7 +307,7 @@ button {
   position: absolute;
   inset: 0;
   z-index: 2;
-  border-radius: 16px;
+  border-radius: var(--radius, 16px);
   background: rgba(0, 0, 0, 0.45);
   cursor: grab;
   touch-action: none;
@@ -362,13 +370,13 @@ button {
 }
 .grid-guide-cell {
   border: 1px dashed var(--border-3);
-  border-radius: 16px;
+  border-radius: var(--radius, 16px);
 }
 
 .react-grid-item.react-grid-placeholder {
   background: var(--accent);
   opacity: 0.15;
-  border-radius: 16px;
+  border-radius: var(--radius, 16px);
 }
 
 /* ---------- Modale ---------- */
@@ -441,6 +449,14 @@ button {
 .swatches { display: flex; flex-wrap: wrap; gap: 8px; }
 .swatch { width: 36px; height: 36px; border-radius: 18px; border: 2px solid transparent; padding: 0; }
 .swatch.on { border-color: var(--text); box-shadow: 0 0 0 2px var(--bg) inset; }
+/* Réglages de la grille */
+.grid-size { display: flex; flex-wrap: wrap; gap: 12px 28px; }
+.stepper { display: flex; align-items: center; gap: 10px; }
+.stepper-label { min-width: 76px; }
+.stepper-value { min-width: 28px; text-align: center; font-family: var(--font-head); font-size: 22px; font-variant-numeric: tabular-nums; }
+.btn-icon:disabled { opacity: 0.4; cursor: not-allowed; }
+.grid-presets { margin-top: 14px; }
+.grid-note { margin-top: 10px; }
 /* Gestion des tâches */
 .task-list, .task-form { display: flex; flex-direction: column; gap: 14px; }
 .task-form { gap: 22px; }
